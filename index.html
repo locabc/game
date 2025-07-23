@@ -318,10 +318,10 @@
             <div class="wheel-container">
                 <div class="wheel-pointer"></div>
                 <div id="prize-wheel">
-                    <div class="wheel-segment">Tăng cơ hội</div>
-                    <div class="wheel-segment">May mắn lần sau</div>
-                    <div class="wheel-segment">Ô không trúng</div>
                     <div class="wheel-segment">Trúng 1 ảnh</div>
+                    <div class="wheel-segment">Ô không trúng</div>
+                    <div class="wheel-segment">May mắn lần sau</div>
+                    <div class="wheel-segment">Tăng cơ hội</div>
                 </div>
             </div>
             <button class="reset-button" id="spin-btn">Quay thưởng</button>
@@ -366,14 +366,10 @@
 
             // --- CẤU HÌNH VÒNG QUAY ---
             const prizes = [
-                // Index 0: Tương ứng với ô "Tăng cơ hội"
-                { text: "Tăng cơ hội nhận phần thưởng đặc biệt!", type: 'text' },
-                // Index 1: Tương ứng với ô "May mắn lần sau"
-                { text: "Chúc bạn may mắn lần sau!", type: 'text' },
-                // Index 2: Tương ứng với ô "Ô không trúng"
-                { text: "Chúc mừng bạn quay vào ô không trúng!", type: 'text' },
-                // Index 3: Tương ứng với ô "Trúng 1 ảnh"
-                { text: "Chúc mừng bạn nhận được 1 bức ảnh!", type: 'image' }
+                { text: "Chúc mừng bạn nhận được 1 bức ảnh!", type: 'image' },    // Index 0: 0–90deg (xám)
+                { text: "Chúc mừng bạn quay vào ô không trúng!", type: 'text' }, // Index 1: 90–180deg (đỏ)
+                { text: "Chúc bạn may mắn lần sau!", type: 'text' },             // Index 2: 180–270deg (xanh)
+                { text: "Tăng cơ hội nhận phần thưởng đặc biệt!", type: 'text' }  // Index 3: 270–360deg (vàng)
             ];
             let currentRotation = 0;
 
