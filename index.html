@@ -501,7 +501,7 @@
             function handleSpinEnd() {
                 const finalAngle = currentRotation % 360;
                 // Góc được dịch 45 độ để tâm của mỗi phần thẳng với kim chỉ
-                const prizeIndex = Math.floor((360 - finalAngle + 45) % 360 / 90);
+                const prizeIndex = Math.floor(((360 - finalAngle) % 360) / 90);
                 const prize = prizes[prizeIndex];
 
                 prizeResultDiv.innerHTML = prize.text;
