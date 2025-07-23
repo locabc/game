@@ -65,7 +65,7 @@
             width: 100%;
             height: 100%;
             transform-style: preserve-3d;
-            transition: transform 1s; /* Giữ thời gian lật 1.2s */
+            transition: transform 1s;
         }
 
         .card-front, .card-back {
@@ -94,7 +94,7 @@
             height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 0.1s ease; /* Hiển thị ảnh nhanh */
+            transition: opacity 0.1s ease;
         }
 
         .card.showing-img .card-back img {
@@ -223,7 +223,7 @@
                 document.getElementById('moveCount').textContent = moves;
 
                 if (flippedCards.length === 2) {
-                    isLocked = true;
+                    isLocked = true; // Khóa ngay khi có 2 thẻ
                     checkMatch();
                 }
             }, 1000); // Đợi 1 giây trước khi lật
@@ -237,18 +237,18 @@
                     card2.classList.add('matched');
                     matchedCards.push(card1, card2);
                     flippedCards = [];
-                    isLocked = false;
+                    isLocked = false; // Mở khóa sau khi xử lý
                     if (matchedCards.length === cards.length) {
-                        setTimeout(() => alert('Chúc mừng! Bạn đã thắng với ' + moves + ' lượt lật!'), 1000);
+                        setTimeout(() => alert('Chúc mừng! Bạn đã thắng với ' + moves + ' lượt lật!'), 1200);
                     }
-                }, 1000); // Đợi 2 giây để xem trước khi ẩn
+                }, 1000); // Đợi 2 giây trước khi ẩn
             } else {
                 setTimeout(() => {
                     card1.classList.remove('flipped');
                     card2.classList.remove('flipped');
                     flippedCards = [];
-                    isLocked = false;
-                }, 1000); // Đợi 3 giây để xem trước khi úp lại
+                    isLocked = false; // Mở khóa sau khi úp lại
+                }, 1000); // Đợi 3 giây trước khi úp lại
             }
         }
 
