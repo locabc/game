@@ -31,11 +31,3 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
-window.addEventListener('resize', () => {
-    game.scale.resize(window.innerWidth, window.innerHeight);
-});
-window.addEventListener('orientationchange', () => {
-    setTimeout(() => {
-        game.scale.resize(window.innerWidth, window.innerHeight);
-    }, 100); // Delay nhỏ để đảm bảo orientation cập nhật
-});

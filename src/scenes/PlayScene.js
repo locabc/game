@@ -1,4 +1,3 @@
-// Trong PlayScene.js, thêm vào đầu file
 import * as C from '../utils/Constants.js';
 import Player from '../entities/Player.js';
 import Hook from '../entities/Hook.js';
@@ -9,7 +8,6 @@ import { levels } from '../utils/data/Levels.js';
 export default class PlayScene extends Phaser.Scene {
     constructor() {
         super({ key: 'PlayScene' });
-        this.audioInitialized = false; // Biến để theo dõi trạng thái âm thanh
     }
 
     init(data) {
@@ -18,23 +16,21 @@ export default class PlayScene extends Phaser.Scene {
     }
     
     create() {
-        // Tính tỷ lệ scale
-        const scaleX = this.scale.width / C.VIRTUAL_WIDTH;
-        const scaleY = this.scale.height / C.VIRTUAL_HEIGHT;
-
         const levelData = levels[this.player.realLevelStr];
         if (!levelData) {
-            console.error(`Dữ liệu cho màn chơi "${this.player.realLevelStr}" không tồn tại trong Levels.js!`);
-            this.scene.start('MenuScene');
-            return; 
+        console.error(`Dữ liệu cho màn chơi "${this.player.realLevelStr}" không tồn tại trong Levels.js!`);
+        // Quay về menu để tránh làm sập game
+        this.scene.start('MenuScene');
+        return; 
         }
-        this.add.image(0, 40 * scaleY, levelData.type).setOrigin(0).setScale(scaleX, scaleY);
-        this.add.image(0, 0, 'LevelCommonTop').setOrigin(0).setScale(scaleX, scaleY);
+        this.add.image(0, 40, levelData.type).setOrigin(0);
+        this.add.image(0, 0, 'LevelCommonTop').setOrigin(0);
         
-        this.playerSprite = this.add.sprite(165 * scaleX, 39 * scaleY, 'playerSheet').setOrigin(0.5, 1).setScale(scaleX, scaleY);
+        this.playerSprite = this.add.sprite(165, 39, 'playerSheet').setOrigin(0.5, 1);
         this.playerSprite.play('player-idle');
         
-        this.hook = new Hook(this, this.playerSprite.x - 5 * scaleX, this.playerSprite.y - 16 * scaleY);
+        // SỬA LỖI ĐIỂM THẢ DÂY: Tọa độ Y đã được hạ thấp xuống đúng vị trí cuộn dây
+        this.hook = new Hook(this, this.playerSprite.x - 5, this.playerSprite.y - 16);
         
         this.mapObjects = this.physics.add.group();
         this.loadLevel(levelData);
@@ -42,26 +38,19 @@ export default class PlayScene extends Phaser.Scene {
         this.physics.add.overlap(this.hook.sprite, this.mapObjects, (hookSprite, mapObj) => {
             mapObj.grabbed();
         });
-
-        // Thêm listener cho pointerdown để resume AudioContext
         this.input.on('pointerdown', () => {
-            if (!this.audioInitialized) {
-                this.sound.context.resume(); // Resume AudioContext trên mobile
-                this.audioInitialized = true;
-            }
-            this.hook.startGrabbing();
-        }, this);
+        this.hook.startGrabbing();
+    }, this);
 
-        // Nút bấm thuốc nổ
-        const dynamiteButton = this.add.image((C.VIRTUAL_WIDTH - 70) * scaleX, (C.VIRTUAL_HEIGHT - 70) * scaleY, 'Dynamite')
-            .setInteractive()
-            .setScale(scaleX, scaleY)
-            .on('pointerdown', (pointer) => {
-                pointer.stopPropagation();
-                this.hook.useDynamite();
-            });
-        dynamiteButton.visible = false;
-        this.dynamiteButton = dynamiteButton;
+    // 2. Thêm nút bấm thuốc nổ
+    const dynamiteButton = this.add.image(C.VIRTUAL_WIDTH - 70, C.VIRTUAL_HEIGHT - 70, 'Dynamite')
+        .setInteractive()
+        .on('pointerdown', (pointer) => {
+            pointer.stopPropagation(); // Ngăn sự kiện chạm lan ra màn hình
+            this.hook.useDynamite();
+        });
+    dynamiteButton.visible = false; // Mặc định ẩn đi
+    this.dynamiteButton = dynamiteButton;
         
         this.input.keyboard.on('keydown-DOWN', this.hook.startGrabbing, this.hook);
         this.input.keyboard.on('keydown-SPACE', this.hook.startGrabbing, this.hook);
@@ -77,6 +66,7 @@ export default class PlayScene extends Phaser.Scene {
             loop: true
         });
     }
+
     update(time, delta) {
         const dt = delta / 1000;
         this.hook.update(dt);
@@ -87,6 +77,7 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     updatePlayerAnimation() {
+        // SỬA LỖI ANIMATION: Logic được làm lại để đảm bảo animation lặp lại đúng
         const currentAnimKey = this.playerSprite.anims.getName();
         let newAnimKey = 'player-idle';
 
@@ -101,13 +92,11 @@ export default class PlayScene extends Phaser.Scene {
 
     loadLevel(levelData) {
         if (!levelData) { return; }
-        const scaleX = this.scale.width / C.VIRTUAL_WIDTH;
-        const scaleY = this.scale.height / C.VIRTUAL_HEIGHT;
         levelData.entities.forEach(e => {
             const config = entityConfig[e.type];
             if (!config) { return; }
-            const x = e.pos.x * scaleX;
-            const y = e.pos.y * scaleY;
+            const x = e.pos.x;
+            const y = e.pos.y;
             let obj;
             switch(config.type){
                 case 'RandomEffect':
@@ -144,16 +133,16 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     onEntityGrabbed(entity) {
-        // Cộng tiền thưởng
+        // Cộng tiền thưởng (bây giờ đã có giá trị số)
         this.player.money += entity.config.bonus;
         this.moneyText.setText('$' + this.player.money);
         
-        // Chơi âm thanh chỉ khi AudioContext đã resume
-        if (this.audioInitialized && entity.config.bonusType) {
+        // Chơi âm thanh dựa trên bonusType
+        if (entity.config.bonusType) {
             this.sound.play(entity.config.bonusType);
         }
 
-        // Kiểm tra hiệu ứng đặc biệt
+        // Kiểm tra xem vật phẩm có hiệu ứng đặc biệt không
         if (typeof entity.onCollected === 'function') {
             entity.onCollected(this);
         }
@@ -162,11 +151,9 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     createUI() {
-        const scaleX = this.scale.width / C.VIRTUAL_WIDTH;
-        const scaleY = this.scale.height / C.VIRTUAL_HEIGHT;
-        this.moneyText = this.add.text(5 * scaleX, 5 * scaleY, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: `${10 * scaleY}px`, fill: '#815504ff' });
-        this.goalText = this.add.text(5 * scaleX, 15 * scaleY, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: `${10 * scaleY}px`, fill: '#459adbff' });
-        this.timeText = this.add.text(260 * scaleX, 15 * scaleY, 'Time: 60', { fontFamily: 'visitor1', fontSize: `${10 * scaleY}px`, fill: '#815504ff' });
-        this.levelText = this.add.text(260 * scaleX, 25 * scaleY, 'Level: ' + this.player.level, { fontFamily: 'visitor1', fontSize: `${10 * scaleY}px`, fill: '#815504ff' });
+        this.moneyText = this.add.text(5, 5, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
+        this.goalText = this.add.text(5, 15, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '10px', fill: '#459adbff' });
+        this.timeText = this.add.text(260, 15, 'Time: 60', { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
+        this.levelText = this.add.text(260, 25, 'Level: ' + this.player.level, { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
     }
 }

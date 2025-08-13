@@ -59,14 +59,14 @@ export default class BootScene extends Phaser.Scene {
         
         
         // Audios (giữ nguyên)
-        this.load.audio('Money', 'audios/money.wav');
-        this.load.audio('HookReset', 'audios/hook_reset.wav');
+        this.load.audio('Money', 'audios/money.mp3');
+        this.load.audio('HookReset', 'audios/hook_reset.mp3');
         this.load.audio('GrabStart', 'audios/grab_start.mp3');
-        this.load.audio('GrabBack', 'audios/grab_back.wav');
-        this.load.audio('Explosive', 'audios/explosive.wav');
-        this.load.audio('High', 'audios/high_value.wav');
-        this.load.audio('Normal', 'audios/normal_value.wav');
-        this.load.audio('Low', 'audios/low_value.wav');
+        this.load.audio('GrabBack', 'audios/grab_back.mp3');
+        this.load.audio('Explosive', 'audios/explosive.mp3');
+        this.load.audio('High', 'audios/high_value.mp3');
+        this.load.audio('Normal', 'audios/normal_value.mp3');
+        this.load.audio('Low', 'audios/low_value.mp3');
         this.load.audio('GoalMusic', 'audios/goal.mp3');
         this.load.audio('MadeGoalMusic', 'audios/made_goal.mp3');
     }
