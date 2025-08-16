@@ -43,6 +43,9 @@ create() {
             this.input.keyboard.once('keydown-ENTER', () => {
                 this.scene.start('MenuScene');
             });
+            this.input.once('pointerdown', () => {
+                this.scene.start('MenuScene');
+            });
             break;
     }
 

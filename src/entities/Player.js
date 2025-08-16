@@ -3,7 +3,7 @@ export default class Player {
         this.level = 1;
         this.realLevelStr = 'L1_1';
         this.goal = 0;
-        this.goalAddOn = 275;
+        this.goalAddOn = 1000;
         this.money = 0;
         this.strength = 1;
         this.dynamiteCount = 0;
@@ -18,10 +18,10 @@ export default class Player {
 
     updateGoal() {
         if (this.level === 1) {
-            this.goal = 1500;
+            this.goal = 1600;
         } else {
             if (this.level > 1 && this.level <= 9) {
-                this.goalAddOn += 270;
+                this.goalAddOn += 1000;
             }
             this.goal += this.goalAddOn;
         }

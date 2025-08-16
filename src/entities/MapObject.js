@@ -43,19 +43,62 @@ export class RandomEffectMapObject extends MapObject {
 
     // Hàm đặc biệt được gọi khi thu thập xong
     onCollected(scene) {
+    const roll = Math.random(); // random 0–1
+
+    if (roll < 0.55) {
+        const bonus = Phaser.Math.Between(
+            this.config.randomBonusRatioMin,
+            this.config.randomBonusRatioMax
+        ) * this.config.bonusBase;
+
+        scene.player.money += bonus;
+        scene.moneyText.setText('$' + scene.player.money);
+        scene.sound.play('Money');
+
+    } else if (roll < 0.85) {
         
-        // Kiểm tra xem có nhận được hiệu ứng đặc biệt không
-        if (Math.random() < this.config.extraEffectChances) {
-            // 20% cơ hội nhận thuốc nổ, 80% còn lại nhận sức mạnh
-            if (Math.random() < 0.2) {
-                scene.player.addDynamite();
-                // Có thể thêm text "Got Dynamite!" ở đây
-            } else {
-                scene.player.strength = Math.min(6, scene.player.strength * 1.5 + 1);
-                // Có thể thêm text "Strength!" ở đây
-            }
-        }
-    }
+        scene.player.dynamiteCount += 1;
+        scene.sound.play('Explosive');
+
+    } else {
+        
+        const keys = ['Anh1']; // danh sách ảnh bạn muốn random
+        const imgKey = Phaser.Utils.Array.GetRandom(keys);
+
+        const { width, height } = scene.scale.gameSize;
+
+        // Thêm ảnh cover full màn hình
+        const img = scene.add.image(width / 2, height / 2, imgKey).setOrigin(0.5);
+
+        // Lấy kích thước gốc
+     const tex = scene.textures.get(imgKey);
+    const source = tex.getSourceImage();
+    const imgW = source.width;
+    const imgH = source.height;
+
+    // Fit ảnh vào khung
+    const scaleX = width / imgW;
+    const scaleY = height / imgH;
+    const scale = Math.min(scaleX, scaleY);
+    img.setScale(scale);
+
+    // Pause timer
+    if (scene.timerEvent) scene.timerEvent.paused = true;
+
+    // Flag tạm dừng gameplay
+    scene.isImageOpen = true;
+
+    // Click để đóng ảnh
+    img.setInteractive({ useHandCursor: true });
+    img.once('pointerdown', () => {
+        img.destroy();
+
+        // Resume gameplay
+        scene.isImageOpen = false;
+        if (scene.timerEvent) scene.timerEvent.paused = false;
+    });
+}
+}
 }
 
 export class MoveAroundMapObject extends MapObject {

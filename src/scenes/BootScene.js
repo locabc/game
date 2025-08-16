@@ -7,7 +7,6 @@ export default class BootScene extends Phaser.Scene {
 
     preload() {
         console.log("Booting game, loading assets...");
-
         // Tải tất cả ảnh với key trùng với 'type' trong game logic
         // Backgrounds
         this.load.image('Menu', 'images/bg_start_menu.png');
@@ -49,14 +48,16 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('LuckyClover', 'images/lucky_clover.png');
         this.load.image('RockCollectorsBook', 'images/rock_collectors_book.png');
         this.load.image('GemPolish', 'images/gem_polish.png');
-        
+        //ảnh random
+        this.load.image('Anh1', 'images/anh1.png');
         // Spritesheets
         this.load.spritesheet('playerSheet', 'images/miner_sheet.png', { frameWidth: 32, frameHeight: 40 });
         this.load.spritesheet('shopkeeperSheet', 'images/shopkeeper_sheet.png', { frameWidth: 80, frameHeight: 80 });
         this.load.spritesheet('hookSheet', 'images/hook_sheet.png', { frameWidth: 13, frameHeight: 15 });
         this.load.spritesheet('moleSheet', 'images/mole_sheet.png', { frameWidth: 18, frameHeight: 13 });
         this.load.spritesheet('moleWithDiamondSheet', 'images/mole_with_diamond_sheet.png', { frameWidth: 18, frameHeight: 13 });
-        
+        this.load.spritesheet('explosion', 'images/explosive_fx_sheet.png', { frameWidth: 64, frameHeight: 64 });
+
         
         // Audios (giữ nguyên)
         this.load.audio('Money', 'audios/money.mp3');
@@ -98,7 +99,13 @@ create() {
         frameRate: 1 / 0.13, // Tốc độ từ file gốc
         repeat: -1
     });
-
+ 
+    this.anims.create({
+    key: 'explosion_anim',
+    frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 11 }), // số frame của sheet
+    frameRate: 20,
+    repeat: 0
+    });
 
     console.log("Animations created, starting Menu Scene.");
     this.scene.start('MenuScene');

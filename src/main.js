@@ -2,7 +2,7 @@ import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import PlayScene from './scenes/PlayScene.js';
 import TransitionScene from './scenes/TransitionScene.js';
-// import ShopScene from './scenes/ShopScene.js';
+import HighScoreScene from './scenes/HighScoreScene.js';
 import * as C from './utils/Constants.js';
 
 const config = {
@@ -26,6 +26,7 @@ const config = {
         MenuScene,
         PlayScene,
         TransitionScene,
+        HighScoreScene,
         // ShopScene
     ]
 };

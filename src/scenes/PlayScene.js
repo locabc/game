@@ -43,13 +43,13 @@ export default class PlayScene extends Phaser.Scene {
     }, this);
 
     // 2. Thêm nút bấm thuốc nổ
-    const dynamiteButton = this.add.image(C.VIRTUAL_WIDTH - 70, C.VIRTUAL_HEIGHT - 70, 'Dynamite')
-        .setInteractive()
-        .on('pointerdown', (pointer) => {
-            pointer.stopPropagation(); // Ngăn sự kiện chạm lan ra màn hình
-            this.hook.useDynamite();
-        });
-    dynamiteButton.visible = false; // Mặc định ẩn đi
+    const dynamiteButton = this.add.image(this.playerSprite.x + 40, this.playerSprite.y - 20, 'Dynamite')
+    .setInteractive()
+    .setScale(0.7)
+    .on('pointerdown', () => {
+        this.hook.useDynamite();
+    });
+    dynamiteButton.visible = false;
     this.dynamiteButton = dynamiteButton;
         
         this.input.keyboard.on('keydown-DOWN', this.hook.startGrabbing, this.hook);
@@ -59,22 +59,25 @@ export default class PlayScene extends Phaser.Scene {
 
         this.createUI();
         this.timeLeft = 60;
-        this.time.addEvent({
-            delay: 1000,
-            callback: this.updateTimer,
-            callbackScope: this,
-            loop: true
+        this.timerEvent = this.time.addEvent({
+        delay: 1000,
+        callback: this.updateTimer,
+        callbackScope: this,
+        loop: true
         });
+
     }
 
-    update(time, delta) {
-        const dt = delta / 1000;
-        this.hook.update(dt);
-        this.updatePlayerAnimation();
-        if (this.dynamiteButton) {
-            this.dynamiteButton.visible = this.player.dynamiteCount > 0 && this.hook.isBacking && this.hook.grabbedEntity;
-        }
+update(time, delta) {
+    if (this.isImageOpen) return; 
+    const dt = delta / 1000;
+    this.hook.update(dt);
+    this.updatePlayerAnimation();
+    if (this.dynamiteButton) {
+        this.dynamiteButton.visible = this.player.dynamiteCount > 0; // Chỉ kiểm tra dynamiteCount
+        this.dynamiteButton.setPosition(this.playerSprite.x + 40, this.playerSprite.y - 20);
     }
+}
 
     updatePlayerAnimation() {
         // SỬA LỖI ANIMATION: Logic được làm lại để đảm bảo animation lặp lại đúng
@@ -151,8 +154,8 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     createUI() {
-        this.moneyText = this.add.text(5, 5, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
-        this.goalText = this.add.text(5, 15, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '10px', fill: '#459adbff' });
+        this.moneyText = this.add.text(5, 15, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
+        this.goalText = this.add.text(5, 25, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '10px', fill: '#459adbff' });
         this.timeText = this.add.text(260, 15, 'Time: 60', { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
         this.levelText = this.add.text(260, 25, 'Level: ' + this.player.level, { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
     }

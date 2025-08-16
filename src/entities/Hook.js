@@ -43,22 +43,29 @@ export default class Hook {
     }
     // Thêm hàm này vào trong class Hook (ví dụ: bên dưới hàm startGrabbing)
 useDynamite() {
-    // Chỉ cho phép dùng thuốc nổ khi đang kéo vật phẩm về và còn thuốc nổ
-    if (this.isBacking && this.grabbedEntity && this.scene.player.dynamiteCount > 0) {
-        this.scene.player.dynamiteCount--; // Trừ đi một quả
-
-        // Gọi hàm explode của vật phẩm (sẽ được định nghĩa sau)
-        // để tạo hiệu ứng và âm thanh
-        if (typeof this.grabbedEntity.explode === 'function') {
-            this.grabbedEntity.explode();
-        } else {
-            this.grabbedEntity.destroy(); // Cách dự phòng là hủy luôn vật phẩm
-        }
-        
-        // Hủy vật phẩm đang kéo và để móc câu tiếp tục đi về
+    if (this.grabbedEntity && this.scene.player.dynamiteCount > 0) {
+        const { x, y } = this.grabbedEntity;
+        // Hủy vật phẩm bị kéo
+        this.grabbedEntity.destroy();
         this.grabbedEntity = null;
+
+        // Giảm số lượng dynamite
+        this.scene.player.dynamiteCount--;
+        // Thêm sprite nổ
+        const explosion = this.scene.add.sprite(x, y, 'explosion');
+        explosion.play('explosion_anim');
+        explosion.once('animationcomplete', () => explosion.destroy());
+        // Cho hook quay về thay vì reset lại hoàn toàn
+        this.isBacking = true;
+        this.isGrabbing = true; // giữ trạng thái đang hoạt động để update() xử lý quay về
+
+        // Thêm hiệu ứng hoặc âm thanh nổ
+        this.scene.sound.play('Explosive');
+    } else {
+        console.log("Không thể dùng dynamite: Không có vật phẩm hoặc không đủ dynamite!");
     }
 }
+
 
     update(dt) {
     if (!this.isGrabbing) {

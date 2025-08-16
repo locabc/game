@@ -38,7 +38,7 @@ export const levels = {
             { "type": "QuestionBag", "pos": { "x": 227, "y": 106 } }
         ]
     },
-    /*
+    
     "L1_2": {
         "type": "LevelD",
         "entities": [
@@ -79,7 +79,7 @@ export const levels = {
             { "type": "QuestionBag", "pos": { "x": 38, "y": 98 } },
             { "type": "Diamond", "pos": { "x": 243, "y": 182 } }
         ]
-    },  */
+    },  
     "L2_1": {
         "type": "LevelD",
         "entities": [
@@ -105,7 +105,7 @@ export const levels = {
             { "type": "Diamond", "pos": { "x": 229, "y": 154 } }
         ]
     },
-    /*
+    
     "L2_2": {
         "type": "LevelB",
         "entities": [
@@ -756,5 +756,5 @@ export const levels = {
             { "type": "MoleWithDiamond", "pos": { "x": 215, "y": 147 }, "dir": "Left" },
             { "type": "MoleWithDiamond", "pos": { "x": 85, "y": 164 }, "dir": "Right" }
         ]
-    }*/
+    }
 };

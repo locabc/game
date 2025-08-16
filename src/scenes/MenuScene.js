@@ -87,6 +87,7 @@ export default class MenuScene extends Phaser.Scene {
             // Nếu chọn "Start Game", tạo một người chơi mới
             if (selected.text === 'Start Game') {
                 const player = new Player();
+                player.dynamiteCount = 1;
                 this.game.player = player;
                 this.scene.start(selected.scene, { ...selected.data, player: player });
             } else {
