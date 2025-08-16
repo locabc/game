@@ -15,17 +15,22 @@ export default class Hook {
         this.sprite.body.setCircle(this.sprite.width / 2);
 
         this.grabSoundTimer = 0;
-        this.reset();
+        this.reset(true);
     }
 
-    reset() {
+    reset(isInit = false) {
+    if (isInit) {
+        // Lần đầu tiên thì đặt về góc trái
         this.angle = C.HOOK_MIN_ANGLE;
+        this.isSwingingRight = true;
+    }
         this.hookLength = 0;
         this.isGrabbing = false;
         this.isBacking = false;
         this.grabbedEntity = null;
-        this.isSwingingRight = true;
-        this.sprite.setFrame(0);
+        this.sprite.setFrame(0); 
+        this.sprite.setPosition(this.origin.x, this.origin.y);
+        this.sprite.setRotation(-Phaser.Math.DegToRad(this.angle));       
         this.updatePosition();
         this.scene.sound.play('HookReset');
     }
