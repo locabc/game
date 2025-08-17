@@ -12,14 +12,14 @@ export const entityConfig = {
     'Skull':          { type: 'Basic', mass: 2,    bonus: 20,  bonusType: 'Low'    },
     'Bone':           { type: 'Basic', mass: 3,    bonus: 7,   bonusType: 'Low'    },
     'QuestionBag': {
-        type: 'RandomEffect', randomMassMin: 1, randomMassMax: 9, bonusBase: 50, bonusType: 'Money', // Sửa 'Normal' thành 'Money'
-        randomBonusRatioMin: 1, randomBonusRatioMax: 16, extraEffectChances: 0.2
+        type: 'RandomEffect', mass: 3, bonus: 0, bonusType: null, // ✅ bonus = 0 để không tự cộng tiền
+        randomBonusRatioMin: 1, randomBonusRatioMax: 1, bonusBase: 0, extraEffectChances: 0
     },
     'Mole': {
-        type: 'MoveAround', mass: 1.5, bonus: 2, speed: 1, width: 18, height: 13, moveRange: 135, bonusType: 'Low'
+        type: 'MoveAround', mass: 1.5, bonus: 2, speed: 1, width: 18, height: 13, moveRange: 35, bonusType: 'Low'
     },
     'MoleWithDiamond': {
-        type: 'MoveAround', mass: 1.5, bonus: 602, speed: 1, width: 18, height: 13, moveRange: 135, bonusType: 'High'
+        type: 'MoveAround', mass: 1.5, bonus: 602, speed: 1, width: 18, height: 13, moveRange: 35, bonusType: 'High'
     },
     'TNT': {
         type: 'Explosive', mass: 1, bonus: 2, bonusType: 'Low'

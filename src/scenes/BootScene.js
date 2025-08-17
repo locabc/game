@@ -6,7 +6,6 @@ export default class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        console.log("Booting game, loading assets...");
         // Tải tất cả ảnh với key trùng với 'type' trong game logic
         // Backgrounds
         this.load.image('Menu', 'images/bg_start_menu.png');
@@ -49,7 +48,9 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('RockCollectorsBook', 'images/rock_collectors_book.png');
         this.load.image('GemPolish', 'images/gem_polish.png');
         //ảnh random
-        this.load.image('Anh1', 'images/anh1.png');
+        for (let i = 1; i <= 16; i++) {
+            this.load.image(`Anh${i}`, `images/Anh${i}.png`);
+        }
         // Spritesheets
         this.load.spritesheet('playerSheet', 'images/miner_sheet.png', { frameWidth: 32, frameHeight: 40 });
         this.load.spritesheet('shopkeeperSheet', 'images/shopkeeper_sheet.png', { frameWidth: 80, frameHeight: 80 });
@@ -57,7 +58,7 @@ export default class BootScene extends Phaser.Scene {
         this.load.spritesheet('moleSheet', 'images/mole_sheet.png', { frameWidth: 18, frameHeight: 13 });
         this.load.spritesheet('moleWithDiamondSheet', 'images/mole_with_diamond_sheet.png', { frameWidth: 18, frameHeight: 13 });
         this.load.spritesheet('explosion', 'images/explosive_fx_sheet.png', { frameWidth: 64, frameHeight: 64 });
-
+        this.load.spritesheet('bigger_explosion', 'images/bigger_explosive_fx_sheet.png', { frameWidth: 100, frameHeight  : 100});
         
         // Audios (giữ nguyên)
         this.load.audio('Money', 'audios/money.mp3');
@@ -70,14 +71,43 @@ export default class BootScene extends Phaser.Scene {
         this.load.audio('Low', 'audios/low_value.mp3');
         this.load.audio('GoalMusic', 'audios/goal.mp3');
         this.load.audio('MadeGoalMusic', 'audios/made_goal.mp3');
+        
+        // ✅ Listen for load completion
+        this.load.on('complete', () => {
+            // All assets loaded successfully
+        });
+        
+        // ✅ Listen for individual file loads
+        this.load.on('filecomplete', (key, type) => {
+            if (type === 'audio') {
+                // Audio loaded successfully
+            }
+        });
+        
+        // ✅ Listen for load errors
+        this.load.on('loaderror', (file) => {
+            // Failed to load file
+        });
     }
 
-    // Trong file src/scenes/BootScene.js
+    create() {
+        // ✅ Tạo dummy audio nếu không có audio nào được load
+        if (!this.sound.get('Money') && !this.sound.get('High') && !this.sound.get('Low')) {
+            // Tạo silent audio buffer để tránh crash
+            const audioContext = this.sound.context;
+            if (audioContext) {
+                const silentBuffer = audioContext.createBuffer(1, 1, 22050);
+                
+                // Thêm dummy audio vào sound manager
+                ['Money', 'High', 'Low', 'Normal', 'GoalMusic', 'MadeGoalMusic', 'GrabStart', 'GrabBack', 'HookReset', 'Explosive'].forEach(key => {
+                    if (!this.sound.get(key)) {
+                        this.sound.add(key, { source: silentBuffer });
+                    }
+                });
+            }
+        }
 
-create() {
-    console.log("Assets loaded. Creating animations...");
-
-    this.anims.create({
+        this.anims.create({
         key: 'player-idle',
         frames: this.anims.generateFrameNumbers('playerSheet', { frames: [0] }),
         frameRate: 1,
@@ -107,7 +137,27 @@ create() {
     repeat: 0
     });
 
-    console.log("Animations created, starting Menu Scene.");
+    this.anims.create({
+    key: 'tnt-explosion',
+    frames: this.anims.generateFrameNumbers('bigger_explosion', { start: 0, end: 11 }), // số frame của sheet
+    frameRate: 20,
+    repeat: 0
+    });
+
+    this.anims.create({
+    key: 'mole_move',
+    frames: this.anims.generateFrameNumbers('moleSheet', { start: 0, end: 6 }), // 6 frame chẳng hạn
+    frameRate: 8,
+    repeat: -1
+    });
+    
+    this.anims.create({
+    key: 'moleWithDiamond_move',
+    frames: this.anims.generateFrameNumbers('moleWithDiamondSheet', { start: 0, end: 6 }),
+    frameRate: 8,
+    repeat: -1
+    });
+
     this.scene.start('MenuScene');
 }
 }

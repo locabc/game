@@ -1,5 +1,3 @@
-// src/entities/Hook.js - PHIÊN BẢN SỬA LỖI VỊ TRÍ MÓC SÁT VÀ HIỂN THỊ TOÀN BỘ
-
 import * as C from '../utils/Constants.js';
 
 export default class Hook {
@@ -35,36 +33,34 @@ export default class Hook {
         this.scene.sound.play('HookReset');
     }
 
+    // Force reset hook (dùng khi TNT nổ)
+    forceReset() {
+        this.scene.sound.stopByKey('GrabBack');
+        this.grabbedEntity = null;
+        this.reset();
+    }
+
     startGrabbing() {
         if (!this.isGrabbing) {
             this.isGrabbing = true;
             this.scene.sound.play('GrabStart');
         }
     }
-    // Thêm hàm này vào trong class Hook (ví dụ: bên dưới hàm startGrabbing)
-useDynamite() {
-    if (this.grabbedEntity && this.scene.player.dynamiteCount > 0) {
-        const { x, y } = this.grabbedEntity;
-        // Hủy vật phẩm bị kéo
-        this.grabbedEntity.destroy();
-        this.grabbedEntity = null;
-
-        // Giảm số lượng dynamite
-        this.scene.player.dynamiteCount--;
-        // Thêm sprite nổ
-        const explosion = this.scene.add.sprite(x, y, 'explosion');
-        explosion.play('explosion_anim');
-        explosion.once('animationcomplete', () => explosion.destroy());
-        // Cho hook quay về thay vì reset lại hoàn toàn
-        this.isBacking = true;
-        this.isGrabbing = true; // giữ trạng thái đang hoạt động để update() xử lý quay về
-
-        // Thêm hiệu ứng hoặc âm thanh nổ
-        this.scene.sound.play('Explosive');
-    } else {
-        console.log("Không thể dùng dynamite: Không có vật phẩm hoặc không đủ dynamite!");
+    useDynamite() {
+        if (this.grabbedEntity && this.scene.player.dynamiteCount > 0) {
+            const { x, y } = this.grabbedEntity;
+            this.grabbedEntity.destroy();
+            this.grabbedEntity = null;
+            this.scene.player.dynamiteCount--;
+            const explosion = this.scene.add.sprite(x, y, 'explosion');
+            explosion.play('explosion_anim');
+            explosion.once('animationcomplete', () => explosion.destroy());
+            this.isBacking = true;
+            this.isGrabbing = true; 
+            this.scene.sound.play('Explosive');
+        } 
+        
     }
-}
 
 
     update(dt) {
@@ -138,11 +134,9 @@ useDynamite() {
             .beginPath().moveTo(this.origin.x, this.origin.y).lineTo(worldX, worldY).stroke();
         
         if (this.grabbedEntity && this.isBacking) {
-            // SỬA LỖI: Đặt vật phẩm sát đầu móc với overlap nhẹ và hiển thị toàn bộ móc
             const hookTipOffset = this.sprite.height; // Chiều cao từ đỉnh móc đến đầu
             let entityOffsetY;
             const overlap = 2; 
-            // Kiểm tra nếu là túi bí ẩn (QuestionBag, type: 'RandomEffect')
             if (this.grabbedEntity.config && this.grabbedEntity.config.type === 'RandomEffect') {
                 // Điều chỉnh offset cho túi bí ẩn (thử nghiệm với giá trị phù hợp)
                 entityOffsetY = (this.grabbedEntity.height / 2) -10; 

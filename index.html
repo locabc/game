@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- ✅ iOS Audio Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-touch-fullscreen" content="yes">
+    
     <title>Đào Vàng</title>
     <link rel="icon" type="image/png" href="images/icon.png">
     <style>
@@ -47,5 +53,20 @@
 <body>
     <div id="phaser-game"></div>
     <script type="module" src="src/main.js"></script>
+    
+    <!-- ✅ Service Worker for Audio Persistence -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        // SW registered
+                    })
+                    .catch((registrationError) => {
+                        // SW registration failed
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

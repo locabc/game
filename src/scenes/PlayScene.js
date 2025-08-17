@@ -4,6 +4,7 @@ import Hook from '../entities/Hook.js';
 import { MapObject, MoveAroundMapObject, ExplosiveMapObject, RandomEffectMapObject } from '../entities/MapObject.js';
 import { entityConfig } from '../utils/data/EntityConfig.js';
 import { levels } from '../utils/data/Levels.js';
+import ShopScene from './ShopScene.js';
 
 export default class PlayScene extends Phaser.Scene {
     constructor() {
@@ -16,9 +17,13 @@ export default class PlayScene extends Phaser.Scene {
     }
     
     create() {
+        // ✅ Resume audio context when starting gameplay
+        if (window.audioManager) {
+            window.audioManager.forceResumeAudio();
+        }
+
         const levelData = levels[this.player.realLevelStr];
         if (!levelData) {
-        console.error(`Dữ liệu cho màn chơi "${this.player.realLevelStr}" không tồn tại trong Levels.js!`);
         // Quay về menu để tránh làm sập game
         this.scene.start('MenuScene');
         return; 
@@ -31,7 +36,6 @@ export default class PlayScene extends Phaser.Scene {
         
         // SỬA LỖI ĐIỂM THẢ DÂY: Tọa độ Y đã được hạ thấp xuống đúng vị trí cuộn dây
         this.hook = new Hook(this, this.playerSprite.x - 5, this.playerSprite.y - 16);
-        
         this.mapObjects = this.physics.add.group();
         this.loadLevel(levelData);
 
@@ -39,26 +43,40 @@ export default class PlayScene extends Phaser.Scene {
             mapObj.grabbed();
         });
         this.input.on('pointerdown', () => {
-        this.hook.startGrabbing();
+        if (!this.isImageOpen) {
+            this.hook.startGrabbing();
+        }
     }, this);
 
     // 2. Thêm nút bấm thuốc nổ
-    const dynamiteButton = this.add.image(this.playerSprite.x + 40, this.playerSprite.y - 20, 'Dynamite')
+    const dynamiteButton = this.add.image(this.playerSprite.x + 40, this.playerSprite.y - 17, 'Dynamite')
     .setInteractive()
     .setScale(0.7)
     .on('pointerdown', () => {
-        this.hook.useDynamite();
+        if (!this.isImageOpen) {
+            this.hook.useDynamite();
+        }
     });
-    dynamiteButton.visible = false;
+    //dynamiteButton.visible = false;
     this.dynamiteButton = dynamiteButton;
         
-        this.input.keyboard.on('keydown-DOWN', this.hook.startGrabbing, this.hook);
-        this.input.keyboard.on('keydown-SPACE', this.hook.startGrabbing, this.hook);
+        this.input.keyboard.on('keydown-DOWN', () => {
+            if (!this.isImageOpen) {
+                this.hook.startGrabbing();
+            }
+        }, this);
+        this.input.keyboard.on('keydown-SPACE', () => {
+            if (!this.isImageOpen) {
+                this.hook.startGrabbing();
+            }
+        }, this);
         
+        // ✅ REMOVE old listener trước khi add mới để tránh duplicate
+        this.events.off('entityGrabbed');
         this.events.on('entityGrabbed', this.onEntityGrabbed, this);
 
         this.createUI();
-        this.timeLeft = 60;
+        this.timeLeft = 20;
         this.timerEvent = this.time.addEvent({
         delay: 1000,
         callback: this.updateTimer,
@@ -68,16 +86,20 @@ export default class PlayScene extends Phaser.Scene {
 
     }
 
-update(time, delta) {
-    if (this.isImageOpen) return; 
-    const dt = delta / 1000;
-    this.hook.update(dt);
-    this.updatePlayerAnimation();
-    if (this.dynamiteButton) {
-        this.dynamiteButton.visible = this.player.dynamiteCount > 0; // Chỉ kiểm tra dynamiteCount
-        this.dynamiteButton.setPosition(this.playerSprite.x + 40, this.playerSprite.y - 20);
+    update(time, delta) {
+        if (this.isImageOpen) return; 
+        const dt = delta / 1000;
+        this.hook.update(dt);
+        this.updatePlayerAnimation();
+        if (this.dynamiteButton) {
+            //this.dynamiteButton.visible = this.player.dynamiteCount > 0; // Chỉ kiểm tra dynamiteCount
+            this.dynamiteButton.setPosition(this.playerSprite.x + 40, this.playerSprite.y - 17);
+        }
+        if (this.dynamiteText) {
+        this.dynamiteText.setText('x' + this.player.dynamiteCount);
+        }
+
     }
-}
 
     updatePlayerAnimation() {
         // SỬA LỖI ANIMATION: Logic được làm lại để đảm bảo animation lặp lại đúng
@@ -127,8 +149,15 @@ update(time, delta) {
         this.timeText.setText('Time: ' + this.timeLeft);
         if (this.timeLeft <= 0) {
             if (this.player.reachGoal()) {
-                this.player.goToNextLevel();
-                this.scene.start('TransitionScene', { type: 'MadeGoal', player: this.player });
+                // ✅ Check if player completed final level (level 10)
+                if (this.player.level >= 10) {
+                    // Player wins the entire game!
+                    this.scene.start('TransitionScene', { type: 'Victory', player: this.player });
+                } else {
+                    // Continue to next level
+                    this.player.goToNextLevel();
+                    this.scene.start('TransitionScene', { type: 'MadeGoal', player: this.player });
+                }
             } else {
                 this.scene.start('TransitionScene', { type: 'GameOver', player: this.player });
             }
@@ -136,27 +165,108 @@ update(time, delta) {
     }
 
     onEntityGrabbed(entity) {
-        // Cộng tiền thưởng (bây giờ đã có giá trị số)
-        this.player.money += entity.config.bonus;
+        if (entity._processed) {
+            return;
+        }
+        entity._processed = true; 
+        
+        if (entity.config.bonus > 0) {
+            let finalBonus = entity.config.bonus;
+            
+            // ✅ Apply shop item effects
+            if (this.player.hasRockCollectorsBook && entity.type.includes('Rock')) {
+                finalBonus *= 2; // Double rock value
+            }
+            
+            if (this.player.hasGemPolish && (entity.type === 'Diamond' || entity.type.includes('Gold'))) {
+                finalBonus *= 1.5; // 50% more for gems/gold
+            }
+            
+            if (this.player.hasLuckyClover && Math.random() < 0.2) {
+                finalBonus *= 2; // 20% chance to double any value
+            }
+            
+            this.player.money += Math.round(finalBonus);
+        }   
+        
         this.moneyText.setText('$' + this.player.money);
         
         // Chơi âm thanh dựa trên bonusType
-        if (entity.config.bonusType) {
+        if (entity.config.bonusType && this.sound.get(entity.config.bonusType)) {
             this.sound.play(entity.config.bonusType);
         }
 
         // Kiểm tra xem vật phẩm có hiệu ứng đặc biệt không
-        if (typeof entity.onCollected === 'function') {
-            entity.onCollected(this);
+        if (typeof entity.onCollected === 'function') {           
+            entity.onCollected(this);         
         }
 
         entity.destroy();
     }
 
+    // ✅ Cleanup khi scene kết thúc
+    shutdown() {
+        // Remove event listeners để tránh memory leak và duplicate
+        this.events.off('entityGrabbed');
+        
+        // Stop timer
+        if (this.timerEvent) {
+            this.timerEvent.destroy();
+        }
+    }
+
     createUI() {
-        this.moneyText = this.add.text(5, 15, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
-        this.goalText = this.add.text(5, 25, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '10px', fill: '#459adbff' });
-        this.timeText = this.add.text(260, 15, 'Time: 60', { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
-        this.levelText = this.add.text(260, 25, 'Level: ' + this.player.level, { fontFamily: 'visitor1', fontSize: '10px', fill: '#815504ff' });
+        this.moneyText = this.add.text(5, 10, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.goalText = this.add.text(5, 23, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '15', fill: '#815504ff' });
+        this.timeText = this.add.text(255, 10, 'Time:60', { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.levelText = this.add.text(255, 23, 'Level:' + this.player.level, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.dynamiteText = this.add.text(210, 23, 'x' + this.player.dynamiteCount, {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
+        
+        // Initialize shop status display
+        this.updatePlayerStats();
+        
+        // ✅ Show level-specific item notice
+        if (this.player.hasStrengthDrink || this.player.hasLuckyClover || 
+            this.player.hasRockCollectorsBook || this.player.hasGemPolish) {
+            const itemNotice = this.add.text(this.cameras.main.centerX, 45, 'Shop items active for this level!', {
+                fontFamily: 'visitor1',
+                fontSize: '10px',
+                fill: '#00ff00',
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            // Fade out after 3 seconds
+            this.tweens.add({
+                targets: itemNotice,
+                alpha: 0,
+                duration: 3000,
+                onComplete: () => itemNotice.destroy()
+            });
+        }
+    }
+
+    // Helper method to update UI when returning from shop
+    updatePlayerStats() {
+        this.moneyText.setText('$' + this.player.money);
+        this.dynamiteText.setText('x' + this.player.dynamiteCount);
+        
+        // Update shop items status display
+        if (this.shopStatusText) {
+            this.shopStatusText.destroy();
+        }
+        
+        let statusText = '';
+        if (this.player.hasStrengthDrink) statusText += '💪 ';
+        if (this.player.hasLuckyClover) statusText += '🍀 ';
+        if (this.player.hasRockCollectorsBook) statusText += '📚 ';
+        if (this.player.hasGemPolish) statusText += '💎 ';
+        
+        if (statusText) {
+            this.shopStatusText = this.add.text(120, 10, statusText, {
+                fontFamily: 'visitor1',
+                fontSize: '12px',
+                fill: '#00ff00'
+            });
+        }
     }
 }

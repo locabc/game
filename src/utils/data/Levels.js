@@ -287,7 +287,7 @@ export const levels = {
             { "type": "Mole", "pos": { "x": 251, "y": 92 }, "dir": "Left" },
             { "type": "Mole", "pos": { "x": 65, "y": 111 }, "dir": "Right" }
         ]
-    },
+    }, 
     "L5_1": {
         "type": "LevelD",
         "entities": [

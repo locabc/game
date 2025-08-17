@@ -5,14 +5,19 @@ export default class MenuScene extends Phaser.Scene {
         
         // Các lựa chọn trong menu
         this.options = [
-            { text: 'Start Game', scene: 'TransitionScene', data: { type: 'NextGoal' } },
-            { text: 'High Score', scene: 'HighScoreScene', data: null } // Updated to point to a HighScoreScene
+            { text: 'Bắt Đầu', scene: 'TransitionScene', data: { type: 'NextGoal' } },
+            { text: 'Điểm Cao', scene: 'HighScoreScene', data: null }
         ];
         this.selectedIndex = 0;
         this.textObjects = []; // Array to store text objects for interactivity
     }
 
     create() {
+        // ✅ Resume audio context when entering menu
+        if (window.audioManager) {
+            window.audioManager.forceResumeAudio();
+        }
+
         // Vẽ nền và tiêu đề game (nếu có)
         this.add.image(0, 0, 'Menu').setOrigin(0);
         this.add.image(this.cameras.main.centerX, 20, 'Title').setOrigin(0.5, 0);
@@ -56,7 +61,26 @@ export default class MenuScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-ENTER', this.selectOption, this);
         this.input.keyboard.on('keydown-SPACE', this.selectOption, this);
         
-        console.log("Menu Scene created. Ready for input.");
+        // Thêm nút bật âm thanh
+        const audioButton = this.add.text(this.cameras.main.centerX, 210, 'Nhấn để bật âm thanh 🔊', {
+            fontFamily: 'Kurland',
+            fontSize: '14px',
+            fill: '#ffaa00',
+            align: 'center'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        audioButton.on('pointerdown', () => {
+            if (window.audioManager) {
+                window.audioManager.forceResumeAudio().then(() => {
+                    audioButton.setText('Âm thanh đã bật ✅');
+                    audioButton.setStyle({ fill: '#00ff00' });
+                }).catch(() => {
+                    audioButton.setText('Lỗi âm thanh ❌');
+                    audioButton.setStyle({ fill: '#ff0000' });
+                });
+            }
+        });
+        
     }
     
     // Hàm di chuyển lựa chọn
@@ -84,18 +108,18 @@ export default class MenuScene extends Phaser.Scene {
         const selected = this.options[this.selectedIndex];
         
         if (selected.scene) {
-            // Nếu chọn "Start Game", tạo một người chơi mới
-            if (selected.text === 'Start Game') {
+            if (selected.text === 'Bắt Đầu') {
+                // Tạo người chơi mới
                 const player = new Player();
                 player.dynamiteCount = 1;
                 this.game.player = player;
-                this.scene.start(selected.scene, { ...selected.data, player: player });
+                this.scene.start(selected.scene, { type: 'NextGoal', player: player });
             } else {
-                // Handle High Score scene
+                // Handle other scenes like High Score
                 this.scene.start(selected.scene, selected.data);
             }
         } else {
-            console.log("Selected option:", selected.text);
+            // Xử lý các scene khác
         }
     }
 }
