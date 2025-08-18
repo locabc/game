@@ -125,7 +125,7 @@ export default class ShopScene extends Phaser.Scene {
                 image: 'StrengthDrink',
                 effect: () => {
                     this.player.hasStrengthDrink = true;
-                    this.player.strength = 2.5;
+                    this.player.strength = 2.7;
                 }
             },
             {
@@ -177,9 +177,9 @@ export default class ShopScene extends Phaser.Scene {
         // Hệ số cơ bản theo level
         let baseLevelMultiplier = 1.0;
         if (level <= 3) {
-            baseLevelMultiplier = 0.8; // Level đầu, giá rẻ hơn
+            baseLevelMultiplier = 0.65; // Level đầu, giá rẻ hơn
         } else if (level <= 6) {
-            baseLevelMultiplier = 1.0; // Level trung, giá chuẩn
+            baseLevelMultiplier = 0.85; // Level trung, giá chuẩn
         } else if (level <= 9) {
             baseLevelMultiplier = 1.2; // Level cao, giá đắt hơn
         } else {
@@ -189,7 +189,7 @@ export default class ShopScene extends Phaser.Scene {
         // Điều chỉnh dựa trên tiền tích lũy
         // Nếu người chơi giàu (moneyRatio > 1) thì giá tăng
         // Nếu người chơi nghèo (moneyRatio < 1) thì giá giảm
-        const wealthMultiplier = 1 + (moneyRatio * 2.5); // Range: 1 - 3.5
+        const wealthMultiplier = 0.5 + (moneyRatio * 1); // Range: 0.5 - 1.5
 
         return baseLevelMultiplier * wealthMultiplier;
     }
@@ -219,17 +219,17 @@ export default class ShopScene extends Phaser.Scene {
                 typeMultiplier = 0.9;
                 break;
             case 'bonus': // Lucky Clover, Gem Polish - tăng thu nhập
-                typeMultiplier = 1.1;
+                typeMultiplier = 0.9;
                 break;
             case 'premium': // Rock Book, Strength - mạnh nhất
-                typeMultiplier = 1.3;
+                typeMultiplier = 1;
                 break;
         }
 
         // Tính giá cuối với random variation
         const randomVariation = Math.floor(Math.random() * variation);
         const finalPrice = Math.floor((basePrice + randomVariation) * levelMultiplier * typeMultiplier);
-        
+
         return Math.max(10, finalPrice); // Giá tối thiểu 10$
     }
 

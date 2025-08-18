@@ -3,7 +3,7 @@ export default class Player {
         this.level = 1;
         this.realLevelStr = 'L1_1';
         this.goal = 0;
-        this.goalAddOn = 750;
+        this.goalAddOn = 500;
         this._money = 0; // Private money field
         this.strength = 1;
         this.dynamiteCount = 0;
@@ -19,16 +19,26 @@ export default class Player {
 
         this.updateGoal(); // Set initial goal
     }
-    updateGoal() {
-        if (this.level === 1) {
-            this.goal = 1800;
-        } else {
-            if (this.level > 1 && this.level <= 30) {
-                this.goalAddOn += 750;
-            }
-            this.goal += this.goalAddOn;
-        }
+    updateGoal() { 
+    if (this.level === 1) { 
+        this.goal = 1600; 
+    } else { 
+        let addOn = 350; 
+        
+        if (this.level > 1 && this.level <= 30) { 
+            addOn += 350;   // = 700 
+        } 
+
+        // cộng thêm bonus theo level (lv2:200, lv3:300, ... lv30:3000) 
+        let levelBonus = this.level * 100;    
+
+        // thêm phần tăng đều 20 mỗi level 
+        let extra = this.level * 20;   
+
+        this.goal += addOn + this.goalAddOn + levelBonus + extra; 
+        } 
     }
+
 
     // Getter for money with logging
     get money() {

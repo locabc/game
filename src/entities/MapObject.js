@@ -47,12 +47,12 @@ export class RandomEffectMapObject extends MapObject {
     // Hàm đặc biệt được gọi khi thu thập xong
     onCollected(scene) {
         const roll = Math.random(); // random 0–1
-        if (roll < 0.5) {
-            const moneyBonus = Phaser.Math.Between(400, 700);
+        if (roll < 0.8) {
+            const moneyBonus = Phaser.Math.Between(500, 900);
             scene.player.money += moneyBonus;
             scene.moneyText.setText('$' + scene.player.money);
             scene.sound.play('Money');
-        } else if (roll < 0.85) {
+        } else if (roll < 0.9) {
             scene.player.addDynamite(1);
             if (scene.dynamiteText) {
                 scene.dynamiteText.setText('x' + scene.player.dynamiteCount);
@@ -71,12 +71,22 @@ export class RandomEffectMapObject extends MapObject {
             // Thêm ảnh cover full màn hình
             const img = scene.add.image(width / 2, height / 2, imgKey).setOrigin(0.5);
             img.setDepth(1001); // Đặt ảnh cao hơn overlay
+            
+            // ✅ Multiple methods để làm ảnh smooth
+            img.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+            
+            // ✅ Thêm CSS style cho canvas để render smooth
+            if (scene.sys.game.canvas) {
+                scene.sys.game.canvas.style.imageRendering = 'auto';
+                scene.sys.game.canvas.style.imageRendering = '-webkit-optimize-contrast';
+            }
+            
             // Lấy kích thước gốc
             const tex = scene.textures.get(imgKey);
             const source = tex.getSourceImage();
             const imgW = source.width;
             const imgH = source.height;
-            // Fit ảnh vào khung
+            // Fit ảnh vào khung với smooth scaling
             const scaleX = width / imgW;
             const scaleY = height / imgH;
             const scale = Math.min(scaleX, scaleY);

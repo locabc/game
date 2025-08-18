@@ -16,6 +16,7 @@ const config = {
         height: C.VIRTUAL_HEIGHT
     },
     pixelArt: false,
+    antialias: true, // ✅ Thêm antialias để ảnh smooth
     // ✅ Audio configuration for mobile
     audio: {
         disableWebAudio: false,

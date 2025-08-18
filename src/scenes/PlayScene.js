@@ -175,15 +175,15 @@ export default class PlayScene extends Phaser.Scene {
             
             // ✅ Apply shop item effects
             if (this.player.hasRockCollectorsBook && entity.type.includes('Rock')) {
-                finalBonus *= 2; // Double rock value
+                finalBonus *= 4; // Double rock value
             }
             
             if (this.player.hasGemPolish && (entity.type === 'Diamond' || entity.type.includes('Gold'))) {
                 finalBonus *= 1.5; // 50% more for gems/gold
             }
             
-            if (this.player.hasLuckyClover && Math.random() < 0.2) {
-                finalBonus *= 2; // 20% chance to double any value
+            if (this.player.hasLuckyClover && Math.random() < 0.3) {
+                finalBonus *= 2.5; // 30% chance to double any value
             }
             
             this.player.money += Math.round(finalBonus);
@@ -216,8 +216,8 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     createUI() {
-        this.moneyText = this.add.text(5, 10, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
-        this.goalText = this.add.text(5, 23, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '15', fill: '#815504ff' });
+        this.moneyText = this.add.text(10, 10, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.goalText = this.add.text(10, 23, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '15', fill: '#815504ff' });
         this.timeText = this.add.text(255, 10, 'Time:60', { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
         this.levelText = this.add.text(255, 23, 'Level:' + this.player.level, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
         this.dynamiteText = this.add.text(210, 23, 'x' + this.player.dynamiteCount, {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
