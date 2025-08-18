@@ -33,6 +33,12 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('TNT', 'images/tnt.png');
         this.load.image('TNT_Destroyed', 'images/tnt_destroyed.png');
         
+        // ✅ Rare special items (reuse existing images)
+        this.load.image('GoldenHook', 'images/gold_big.png'); // Use gold image for golden hook
+        this.load.image('TimeCrystal', 'images/diamond.png'); // Use diamond for time crystal
+        this.load.image('MagnetStone', 'images/rock_normal.png'); // Use rock for magnet stone
+        this.load.image('LuckyStar', 'images/light.png'); // Use light for lucky star
+        
         // UI and others
         this.load.image('MenuArrow', 'images/menu_arrow.png');
         this.load.image('Panel', 'images/panel.png');

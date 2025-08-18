@@ -48,7 +48,7 @@ export class RandomEffectMapObject extends MapObject {
     onCollected(scene) {
         const roll = Math.random(); // random 0–1
         if (roll < 0.8) {
-            const moneyBonus = Phaser.Math.Between(500, 900);
+            const moneyBonus = Phaser.Math.Between(500, 750);
             scene.player.money += moneyBonus;
             scene.moneyText.setText('$' + scene.player.money);
             scene.sound.play('Money');
@@ -231,5 +231,307 @@ export class ExplosiveMapObject extends MapObject {
         
         // 5. Cuối cùng, tự hủy chính thùng TNT
         this.destroy();
+    }
+}
+
+// ✅ NEW: Special Effect Map Objects - Rare items with special powers
+export class SpecialEffectMapObject extends MapObject {
+    init(config) {
+        super.init(config);
+        this.effectType = config.effect;
+        this.duration = config.duration || 0;
+        this.isActivated = false;
+        
+        // ✅ Visual glow effect for rare items
+        this.glowTween = this.scene.tweens.add({
+            targets: this,
+            alpha: 0.6,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+        
+        return this;
+    }
+
+    // Called when collected
+    onCollected(scene) {
+        if (this.isActivated) return; // Prevent double activation
+        this.isActivated = true;
+        
+        // Stop glow effect
+        if (this.glowTween) {
+            this.glowTween.destroy();
+        }
+        
+        switch (this.effectType) {
+            case 'speed_boost':
+                this.activateSpeedBoost(scene);
+                break;
+            case 'time_bonus':
+                this.activateTimeBonus(scene);
+                break;
+            case 'magnet_pull':
+                this.activateMagnetPull(scene);
+                break;
+            case 'lucky_streak':
+                this.activateLuckyStreak(scene);
+                break;
+        }
+        
+        // Show special pickup effect
+        this.showPickupEffect(scene);
+    }
+
+    activateSpeedBoost(scene) {
+        scene.player.hasGoldenHook = true;
+        scene.player.goldenHookTimer = this.duration;
+        
+        // UI notification
+        const text = scene.add.text(scene.cameras.main.centerX, 60, 'Kéo nhanh gấp đôi!', {
+            fontFamily: 'Kurland',
+            fontSize: '14px',
+            fill: '#05dc30ff',
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        scene.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 3000,
+            onComplete: () => text.destroy()
+        });
+    }
+
+    activateTimeBonus(scene) {
+        scene.timeLeft += this.config.timeAdd;
+        scene.timeText.setText('Time: ' + scene.timeLeft);
+        
+        const text = scene.add.text(scene.cameras.main.centerX, 60, '+10 Giây! ⏰', {
+            fontFamily: 'Kurland',
+            fontSize: '16px',
+            fill: '#05dc30ff',
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        scene.tweens.add({
+            targets: text,
+            alpha: 0,
+            y: 30,
+            duration: 3000,
+            onComplete: () => text.destroy()
+        });
+    }
+
+    activateMagnetPull(scene) {
+        scene.player.hasMagnetStone = true;
+        scene.player.magnetRadius = this.config.radius;
+        scene.player.magnetTimer = 20000; // 20 seconds
+
+        const text = scene.add.text(scene.cameras.main.centerX, 60, 'Hút vật phẩm nhỏ!🧲', {
+            fontFamily: 'Kurland',
+            fontSize: '14px',
+            fill: '#05dc30ff',
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        scene.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 3000,
+            onComplete: () => text.destroy()
+        });
+    }
+
+    activateLuckyStreak(scene) {
+        scene.player.hasLuckyStar = true;
+        scene.player.luckyStreakCount = this.config.streakCount;
+        
+        const text = scene.add.text(scene.cameras.main.centerX, 60, '3 lần kéo may mắn! ☘', {
+            fontFamily: 'Kurland',
+            fontSize: '14px',
+            fill: '#05dc30ff',
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        scene.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 3000,
+            onComplete: () => text.destroy()
+        });
+    }
+
+    showPickupEffect(scene) {
+        // Create sparkle effect
+        const sparkles = [];
+        for (let i = 0; i < 8; i++) {
+            const sparkle = scene.add.image(this.x, this.y, 'light');
+            sparkle.setScale(0.3);
+            sparkle.setTint(Phaser.Display.Color.HSVToRGB(Math.random(), 0.8, 1).color);
+            sparkles.push(sparkle);
+            
+            scene.tweens.add({
+                targets: sparkle,
+                x: this.x + Phaser.Math.Between(-50, 50),
+                y: this.y + Phaser.Math.Between(-50, 50),
+                scale: 0,
+                alpha: 0,
+                duration: 1000,
+                ease: 'Power2',
+                onComplete: () => sparkle.destroy()
+            });
+        }
+    }
+
+    destroy() {
+        if (this.glowTween) {
+            this.glowTween.destroy();
+        }
+        super.destroy();
+    }
+}
+
+// ✅ Boss Mole - Large, tough enemy with multiple hit points
+export class BossMoveAroundMapObject extends MoveAroundMapObject {
+    init(config, dir) {
+        super.init(config, dir);
+        
+        // Boss-specific properties
+        this.maxHp = config.hp || 3;
+        this.currentHp = this.maxHp;
+        this.isBoss = true;
+        
+        // Visual enhancements
+        this.setScale(config.scale || 3);
+        this.setTint(0xff6600); // Orange tint to distinguish from normal moles
+        
+        // Boss glow effect
+        this.bossGlow = this.scene.tweens.add({
+            targets: this,
+            alpha: 0.7,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+        
+        // Screen shake when boss appears
+        this.scene.cameras.main.shake(200, 0.01);
+        
+        // Boss entrance message
+        const bossText = this.scene.add.text(this.scene.cameras.main.centerX, 60, 'BOSS XUẤT HIỆN! 🐭💀', {
+            fontFamily: 'Kurland',
+            fontSize: '16px',
+            fill: '#ff0000',
+            stroke: '#ffffff',
+            strokeThickness: 2,
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        this.scene.tweens.add({
+            targets: bossText,
+            alpha: 0,
+            y: 30,
+            duration: 3000,
+            onComplete: () => bossText.destroy()
+        });
+        
+        return this;
+    }
+
+    // Override grabbed to handle multiple hits
+    grabbed() {
+        let hook = this.scene.hook;
+        if (!hook.isBacking && !hook.grabbedEntity) {
+            // Take damage
+            this.currentHp--;
+            
+            // Visual damage feedback
+            this.setTint(0xff0000); // Red flash
+            this.scene.time.delayedCall(200, () => {
+                this.setTint(0xff6600); // Back to orange
+            });
+            
+            // Screen shake on hit
+            this.scene.cameras.main.shake(100, 0.005);
+            
+            if (this.currentHp <= 0) {
+                // Boss defeated - normal grab behavior
+                hook.grabbedEntity = this;
+                hook.sprite.setFrame(this.width < hook.sprite.width ? 2 : 1);
+                this.body.setEnable(false);
+                
+                // Boss defeat effects
+                this.showBossDefeatEffect();
+            } else {
+                // Boss still alive - show HP and reject grab
+                this.showDamageText();
+                hook.forceReset(); // Force hook to retract
+            }
+        }
+    }
+
+    showDamageText() {
+        const damageText = this.scene.add.text(this.x, this.y - 30, `HP: ${this.currentHp}/${this.maxHp}`, {
+            fontFamily: 'Kurland',
+            fontSize: '14px',
+            fill: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        
+        this.scene.tweens.add({
+            targets: damageText,
+            alpha: 0,
+            y: this.y - 50,
+            duration: 1500,
+            onComplete: () => damageText.destroy()
+        });
+    }
+
+    showBossDefeatEffect() {
+        // Victory message
+        const victoryText = this.scene.add.text(this.scene.cameras.main.centerX, 80, 'BOSS ĐÃ BỊ ĐÁNH BẠI! 🏆\n+2500 Gold!', {
+            fontFamily: 'Kurland',
+            fontSize: '16px',
+            fill: '#00ff00',
+            stroke: '#000000',
+            strokeThickness: 2,
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        this.scene.tweens.add({
+            targets: victoryText,
+            alpha: 0,
+            duration: 4000,
+            onComplete: () => victoryText.destroy()
+        });
+        
+        // Explosion effect
+        for (let i = 0; i < 12; i++) {
+            const sparkle = this.scene.add.image(this.x, this.y, 'light');
+            sparkle.setScale(0.5);
+            sparkle.setTint(Phaser.Display.Color.HSVToRGB(i / 12, 0.8, 1).color);
+            
+            this.scene.tweens.add({
+                targets: sparkle,
+                x: this.x + Phaser.Math.Between(-80, 80),
+                y: this.y + Phaser.Math.Between(-80, 80),
+                scale: 0,
+                alpha: 0,
+                duration: 1500,
+                ease: 'Power2',
+                onComplete: () => sparkle.destroy()
+            });
+        }
+    }
+
+    destroy() {
+        if (this.bossGlow) {
+            this.bossGlow.destroy();
+        }
+        super.destroy();
     }
 }

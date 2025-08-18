@@ -13,6 +13,15 @@ export default class Player {
         this.hasRockCollectorsBook = false;
         this.hasGemPolish = false;
 
+        // ✅ NEW: Special rare item effects
+        this.hasGoldenHook = false;
+        this.goldenHookTimer = 0;
+        this.hasMagnetStone = false;
+        this.magnetRadius = 0;
+        this.magnetTimer = 0;
+        this.hasLuckyStar = false;
+        this.luckyStreakCount = 0;
+
         // ✅ Track high score for current session
         this.sessionHighScore = 0;
         this.hasRecordedFinalScore = false;
@@ -78,6 +87,15 @@ export default class Player {
         this.hasLuckyClover = false;
         this.hasRockCollectorsBook = false;
         this.hasGemPolish = false;
+        
+        // ✅ Reset special rare item effects
+        this.hasGoldenHook = false;
+        this.goldenHookTimer = 0;
+        this.hasMagnetStone = false;
+        this.magnetRadius = 0;
+        this.magnetTimer = 0;
+        this.hasLuckyStar = false;
+        this.luckyStreakCount = 0;
         
         this.updateGoal();
     }

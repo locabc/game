@@ -101,6 +101,12 @@ export default class Hook {
             if (this.grabbedEntity) {
                 let mass = (this.grabbedEntity.config.mass || 3) * 2.5;
                 let strength = this.scene.player.hasStrengthDrink ? this.scene.player.strength : 1.25;
+                
+                // ✅ Golden Hook effect - double speed
+                if (this.scene.player.hasGoldenHook) {
+                    strength *= 2;
+                }
+                
                 backSpeed *= strength / mass;
                 this.grabSoundTimer -= dt;
                 if (this.grabSoundTimer <= 0) {

@@ -102,7 +102,7 @@ export default class ShopScene extends Phaser.Scene {
             },
             {
                 name: 'Thêm may mắn',
-                description: 'Tăng cơ hội tìm được vật phẩm quý',
+                description: 'Tăng cơ hội tìm được vật phẩm quý (x2.5)',
                 price: this.calculateItemPrice(60, 40, levelPriceMultiplier, 'bonus'), // Base 60, variation 40
                 image: 'LuckyClover', 
                 effect: () => {
@@ -111,7 +111,7 @@ export default class ShopScene extends Phaser.Scene {
             },
             {
                 name: 'Nhân Đôi Giá Trị Của Đá',
-                description: 'Đá cho nhiều tiền hơn (x2)',
+                description: 'Đá cho nhiều tiền hơn (x4)',
                 price: this.calculateItemPrice(120, 60, levelPriceMultiplier, 'premium'), // Base 120, variation 60
                 image: 'RockCollectorsBook',
                 effect: () => {

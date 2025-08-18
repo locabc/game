@@ -1,8 +1,8 @@
 import * as C from '../utils/Constants.js';
 import Player from '../entities/Player.js';
 import Hook from '../entities/Hook.js';
-import { MapObject, MoveAroundMapObject, ExplosiveMapObject, RandomEffectMapObject } from '../entities/MapObject.js';
-import { entityConfig } from '../utils/data/EntityConfig.js';
+import { MapObject, MoveAroundMapObject, ExplosiveMapObject, RandomEffectMapObject, SpecialEffectMapObject, BossMoveAroundMapObject } from '../entities/MapObject.js';
+import entityConfig from '../utils/data/EntityConfig.js';
 import { levels } from '../utils/data/Levels.js';
 import ShopScene from './ShopScene.js';
 
@@ -91,6 +91,13 @@ export default class PlayScene extends Phaser.Scene {
         const dt = delta / 1000;
         this.hook.update(dt);
         this.updatePlayerAnimation();
+        
+        // ✅ Update special item timers
+        this.updateSpecialItemTimers(delta);
+        
+        // ✅ Magnet Stone auto-pull logic
+        this.updateMagnetPull();
+        
         if (this.dynamiteButton) {
             //this.dynamiteButton.visible = this.player.dynamiteCount > 0; // Chỉ kiểm tra dynamiteCount
             this.dynamiteButton.setPosition(this.playerSprite.x + 40, this.playerSprite.y - 17);
@@ -99,6 +106,157 @@ export default class PlayScene extends Phaser.Scene {
         this.dynamiteText.setText('x' + this.player.dynamiteCount);
         }
 
+    }
+
+    updateSpecialItemTimers(delta) {
+        // Golden Hook timer
+        if (this.player.hasGoldenHook && this.player.goldenHookTimer > 0) {
+            this.player.goldenHookTimer -= delta;
+            if (this.player.goldenHookTimer <= 0) {
+                this.player.hasGoldenHook = false;
+                // Show expiry message
+                const text = this.add.text(this.cameras.main.centerX, 70, 'Đã hết hiệu lực.', {
+                    fontFamily: 'Kurland',
+                    fontSize: '12px',
+                    fill: '#07bf16ff'
+                }).setOrigin(0.5);
+                
+                this.tweens.add({
+                    targets: text,
+                    alpha: 0,
+                    duration: 3000,
+                    onComplete: () => text.destroy()
+                });
+            }
+        }
+
+        // Magnet timer
+        if (this.player.hasMagnetStone && this.player.magnetTimer > 0) {
+            this.player.magnetTimer -= delta;
+            if (this.player.magnetTimer <= 0) {
+                this.player.hasMagnetStone = false;
+                // Show expiry message
+                const text = this.add.text(this.cameras.main.centerX, 70, 'ĐÃ HẾT HIỆU LỰC', {
+                    fontFamily: 'Kurland',
+                    fontSize: '12px',
+                    fill: '#14ce68ff'
+                }).setOrigin(0.5);
+                
+                this.tweens.add({
+                    targets: text,
+                    alpha: 0,
+                    duration: 3000,
+                    onComplete: () => text.destroy()
+                });
+            }
+        }
+    }
+
+    updateMagnetPull() {
+        // ✅ Magnet Stone auto-pull small items toward hook
+        if (this.player.hasMagnetStone && this.player.magnetRadius > 0) {
+            const itemsToAutoCollect = [];
+            
+            this.mapObjects.getChildren().forEach(obj => {
+                // Only pull small/light objects
+                if (obj.config && obj.config.mass <= 3.5 && obj.body.enable !== false) {
+                    const distance = Phaser.Math.Distance.Between(
+                        this.hook.sprite.x, this.hook.sprite.y, 
+                        obj.x, obj.y
+                    );
+                    
+                    // If hook is free (at start position) and item is close - normal grab
+                    if (distance <= 30 && !this.hook.grabbedEntity && this.hook.hookLength === 0) {
+                        obj.grabbed(); // Trigger normal grab behavior
+                    }
+                    // If hook is back to start position and item is close - auto-collect
+                    else if (distance <= 30 && this.hook.hookLength === 0) {
+                        itemsToAutoCollect.push(obj);
+                    }
+                    // Pull if within magnet radius
+                    else if (distance <= this.player.magnetRadius && distance > 20) {
+                        const angle = Phaser.Math.Angle.Between(
+                            obj.x, obj.y, 
+                            this.hook.sprite.x, this.hook.sprite.y
+                        );
+                        const pullStrength = 2; // Pull speed
+                        
+                        obj.x += Math.cos(angle) * pullStrength;
+                        obj.y += Math.sin(angle) * pullStrength;
+                    }
+                }
+            });
+            
+            // Auto-collect items when hook has finished its pulling cycle
+            itemsToAutoCollect.forEach(obj => {
+                if (obj.config.bonus > 0) {
+                    let finalBonus = obj.config.bonus;
+                    
+                    // Apply shop bonuses (same as onEntityGrabbed)
+                    if (this.player.hasRockCollectorsBook && obj.type.includes('Rock')) {
+                        finalBonus *= 4;
+                    }
+                    if (this.player.hasGemPolish && (obj.type === 'Diamond' || obj.type.includes('Gold'))) {
+                        finalBonus *= 1.5;
+                    }
+                    if (this.player.hasLuckyClover && Math.random() < 0.3) {
+                        finalBonus *= 2.5;
+                    }
+                    
+                    this.player.money += Math.round(finalBonus);
+                    this.moneyText.setText('$' + this.player.money);
+                    
+                    // Play sound
+                    if (obj.config.bonusType && this.sound.get(obj.config.bonusType)) {
+                        this.sound.play(obj.config.bonusType);
+                    }
+                    
+                    // Enhanced collection effect - bigger and longer lasting
+                    const collectText = this.add.text(obj.x, obj.y - 20, `🧲+$${Math.round(finalBonus)}`, {
+                        fontFamily: 'Kurland',
+                        fontSize: '16px',
+                        fill: '#00ffff',
+                        stroke: '#000000',
+                        strokeThickness: 2
+                    }).setOrigin(0.5);
+                    
+                    this.tweens.add({
+                        targets: collectText,
+                        alpha: 0,
+                        y: obj.y - 60,
+                        scale: 1.5,
+                        duration: 2500,
+                        ease: 'Power2',
+                        onComplete: () => collectText.destroy()
+                    });
+                    
+                    // Sparkle effect for magnet collection
+                    for (let i = 0; i < 6; i++) {
+                        const sparkle = this.add.image(obj.x, obj.y, 'light');
+                        sparkle.setScale(0.3);
+                        sparkle.setTint(0x00ffff);
+                        
+                        this.tweens.add({
+                            targets: sparkle,
+                            x: obj.x + Phaser.Math.Between(-30, 30),
+                            y: obj.y + Phaser.Math.Between(-30, 30),
+                            scale: 0,
+                            alpha: 0,
+                            duration: 1000,
+                            ease: 'Power2',
+                            onComplete: () => sparkle.destroy()
+                        });
+                    }
+                }
+                
+                // Check for special effects
+                if (typeof obj.onCollected === 'function') {           
+                    obj.onCollected(this);         
+                }
+                
+                obj.destroy();
+            });
+        }
     }
 
     updatePlayerAnimation() {
@@ -136,11 +294,68 @@ export default class PlayScene extends Phaser.Scene {
                     obj = new ExplosiveMapObject(this, x, y, e.type);
                     obj.init(config);
                     break;
+                case 'SpecialEffect':
+                    obj = new SpecialEffectMapObject(this, x, y, e.type);
+                    obj.init(config);
+                    break;
+                case 'BossMoveAround':
+                    obj = new BossMoveAroundMapObject(this, x, y, e.type);
+                    obj.init(config, e.dir || 'Left');
+                    break;
                 default:
                     obj = new MapObject(this, x, y, e.type);
                     obj.init(config);
             }
             this.mapObjects.add(obj);
+        });
+        
+        // ✅ Add rare special items with low spawn chance
+        this.spawnRareItems();
+        
+        // ✅ Spawn Boss Mole every 5 levels
+        this.spawnBossIfNeeded();
+    }
+
+    spawnBossIfNeeded() {
+        // Boss appears on level 5, 10, 15, 20, etc.
+        if (this.player.level % 5 === 0) {
+            const config = entityConfig['BossMole'];
+            if (config) {
+                // Spawn boss in center-bottom area
+                const x = Phaser.Math.Between(120, 200);
+                const y = Phaser.Math.Between(160, 190);
+                
+                const boss = new BossMoveAroundMapObject(this, x, y, 'MoleWithDiamond'); // Use diamond mole sprite
+                boss.init(config, 'Left');
+                this.mapObjects.add(boss);
+            }
+        }
+    }
+
+    spawnRareItems() {
+        const rareItems = ['GoldenHook', 'TimeCrystal', 'MagnetStone', 'LuckyStar'];
+        
+        rareItems.forEach(itemType => {
+            const config = entityConfig[itemType];
+            if (config && Math.random() < config.spawnChance) {
+                // Random position in lower area
+                const x = Phaser.Math.Between(50, 270);
+                const y = Phaser.Math.Between(180, 220);
+                
+                // Check if position is clear (not overlapping other items)
+                let positionClear = true;
+                this.mapObjects.getChildren().forEach(existing => {
+                    if (Phaser.Math.Distance.Between(x, y, existing.x, existing.y) < 30) {
+                        positionClear = false;
+                    }
+                });
+                
+                if (positionClear) {
+                    const obj = new SpecialEffectMapObject(this, x, y, itemType);
+                    obj.init(config);
+                    this.mapObjects.add(obj);
+                }
+            }
         });
     }
 
@@ -184,6 +399,35 @@ export default class PlayScene extends Phaser.Scene {
             
             if (this.player.hasLuckyClover && Math.random() < 0.3) {
                 finalBonus *= 2.5; // 30% chance to double any value
+            }
+            
+            // ✅ Lucky Star effect - guaranteed valuable items for next 3 grabs
+            if (this.player.hasLuckyStar && this.player.luckyStreakCount > 0) {
+                if (entity.type.includes('Rock') || entity.config.bonus <= 100) {
+                    // Convert low-value items to high-value
+                    finalBonus = Math.max(finalBonus, 300);
+                } else if (entity.type.includes('Gold') && entity.config.bonus > 100) {
+                    // Double gold value if > 100
+                    finalBonus *= 2;
+                }
+                this.player.luckyStreakCount--;
+                
+                if (this.player.luckyStreakCount <= 0) {
+                    this.player.hasLuckyStar = false;
+                    // Show streak end message
+                    const text = this.add.text(this.cameras.main.centerX, 70, 'ĐÃ HẾT HIỆU LỰC!', {
+                        fontFamily: 'Kurland',
+                        fontSize: '12px',
+                        fill: '#05dc30ff'
+                    }).setOrigin(0.5);
+                    
+                    this.tweens.add({
+                        targets: text,
+                        alpha: 0,
+                        duration: 3000,
+                        onComplete: () => text.destroy()
+                    });
+                }
             }
             
             this.player.money += Math.round(finalBonus);
