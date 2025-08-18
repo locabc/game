@@ -76,7 +76,7 @@ export default class PlayScene extends Phaser.Scene {
         this.events.on('entityGrabbed', this.onEntityGrabbed, this);
 
         this.createUI();
-        this.timeLeft = 20;
+        this.timeLeft = 60;
         this.timerEvent = this.time.addEvent({
         delay: 1000,
         callback: this.updateTimer,
@@ -149,8 +149,8 @@ export default class PlayScene extends Phaser.Scene {
         this.timeText.setText('Time: ' + this.timeLeft);
         if (this.timeLeft <= 0) {
             if (this.player.reachGoal()) {
-                // ✅ Check if player completed final level (level 10)
-                if (this.player.level >= 10) {
+                // ✅ Check if player completed final level (level 30)
+                if (this.player.level >= 30) {
                     // Player wins the entire game!
                     this.scene.start('TransitionScene', { type: 'Victory', player: this.player });
                 } else {
@@ -224,49 +224,11 @@ export default class PlayScene extends Phaser.Scene {
         
         // Initialize shop status display
         this.updatePlayerStats();
-        
-        // ✅ Show level-specific item notice
-        if (this.player.hasStrengthDrink || this.player.hasLuckyClover || 
-            this.player.hasRockCollectorsBook || this.player.hasGemPolish) {
-            const itemNotice = this.add.text(this.cameras.main.centerX, 45, 'Shop items active for this level!', {
-                fontFamily: 'visitor1',
-                fontSize: '10px',
-                fill: '#00ff00',
-                align: 'center'
-            }).setOrigin(0.5);
-            
-            // Fade out after 3 seconds
-            this.tweens.add({
-                targets: itemNotice,
-                alpha: 0,
-                duration: 3000,
-                onComplete: () => itemNotice.destroy()
-            });
-        }
     }
 
     // Helper method to update UI when returning from shop
     updatePlayerStats() {
         this.moneyText.setText('$' + this.player.money);
-        this.dynamiteText.setText('x' + this.player.dynamiteCount);
-        
-        // Update shop items status display
-        if (this.shopStatusText) {
-            this.shopStatusText.destroy();
-        }
-        
-        let statusText = '';
-        if (this.player.hasStrengthDrink) statusText += '💪 ';
-        if (this.player.hasLuckyClover) statusText += '🍀 ';
-        if (this.player.hasRockCollectorsBook) statusText += '📚 ';
-        if (this.player.hasGemPolish) statusText += '💎 ';
-        
-        if (statusText) {
-            this.shopStatusText = this.add.text(120, 10, statusText, {
-                fontFamily: 'visitor1',
-                fontSize: '12px',
-                fill: '#00ff00'
-            });
-        }
+        this.dynamiteText.setText('x' + this.player.dynamiteCount);  
     }
 }

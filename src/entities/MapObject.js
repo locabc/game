@@ -52,14 +52,14 @@ export class RandomEffectMapObject extends MapObject {
             scene.player.money += moneyBonus;
             scene.moneyText.setText('$' + scene.player.money);
             scene.sound.play('Money');
-        } else if (roll < 0.95) {
+        } else if (roll < 0.85) {
             scene.player.addDynamite(1);
             if (scene.dynamiteText) {
                 scene.dynamiteText.setText('x' + scene.player.dynamiteCount);
             }
         } else {
             const keys = [];
-            for (let i = 1; i <= 16; i++) {
+            for (let i = 1; i <= 17; i++) {
             keys.push(`Anh${i}`);
             }
             //const keys = ['Anh1', 'Anh2', 'Anh3', 'Anh4', 'Anh5', 'Anh6', 'Anh7', 'Anh8', 'Anh9', 'Anh10', 'Anh11', 'Anh12', 'Anh13', 'Anh14', 'Anh15', 'Anh16'];

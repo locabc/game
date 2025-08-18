@@ -92,7 +92,7 @@ export default class ShopScene extends Phaser.Scene {
         // Danh sách tất cả vật phẩm có thể có trong shop
         const allItems = [
             {
-                name: 'Dynamite',
+                name: 'Thuốc nổ',
                 description: 'Phá hủy đá bằng thuốc nổ',
                 price: this.calculateItemPrice(80, 50, levelPriceMultiplier, 'utility'), // Base 80, variation 50
                 image: 'Dynamite',
@@ -101,7 +101,7 @@ export default class ShopScene extends Phaser.Scene {
                 }
             },
             {
-                name: 'Lucky Clover',
+                name: 'Thêm may mắn',
                 description: 'Tăng cơ hội tìm được vật phẩm quý',
                 price: this.calculateItemPrice(60, 40, levelPriceMultiplier, 'bonus'), // Base 60, variation 40
                 image: 'LuckyClover', 
@@ -110,7 +110,7 @@ export default class ShopScene extends Phaser.Scene {
                 }
             },
             {
-                name: 'Rock Collectors Book',
+                name: 'Nhân Đôi Giá Trị Của Đá',
                 description: 'Đá cho nhiều tiền hơn (x2)',
                 price: this.calculateItemPrice(120, 60, levelPriceMultiplier, 'premium'), // Base 120, variation 60
                 image: 'RockCollectorsBook',
@@ -119,17 +119,17 @@ export default class ShopScene extends Phaser.Scene {
                 }
             },
             {
-                name: 'Strength Drink',
+                name: 'Nước Tăng Lực',
                 description: 'Tăng tốc độ kéo móc câu',
                 price: this.calculateItemPrice(150, 70, levelPriceMultiplier, 'premium'), // Base 150, variation 70
                 image: 'StrengthDrink',
                 effect: () => {
                     this.player.hasStrengthDrink = true;
-                    this.player.strength = 2;
+                    this.player.strength = 2.5;
                 }
             },
             {
-                name: 'Gem Polish',
+                name: 'Đá quý giá trị cao hơn',
                 description: 'Đá quý có giá trị cao hơn (x1.5)',
                 price: this.calculateItemPrice(100, 50, levelPriceMultiplier, 'bonus'), // Base 100, variation 50
                 image: 'GemPolish',
@@ -138,7 +138,7 @@ export default class ShopScene extends Phaser.Scene {
                 }
             },
             {
-                name: 'Question Bag',
+                name: 'Túi bí ẩn',
                 description: 'Túi bí ẩn với hiệu ứng ngẫu nhiên',
                 price: this.calculateItemPrice(30, 20, levelPriceMultiplier, 'cheap'), // Base 30, variation 20
                 image: 'QuestionBag',
@@ -189,8 +189,8 @@ export default class ShopScene extends Phaser.Scene {
         // Điều chỉnh dựa trên tiền tích lũy
         // Nếu người chơi giàu (moneyRatio > 1) thì giá tăng
         // Nếu người chơi nghèo (moneyRatio < 1) thì giá giảm
-        const wealthMultiplier = 0.7 + (moneyRatio * 0.4); // Range: 0.7 - 1.1
-        
+        const wealthMultiplier = 1 + (moneyRatio * 2.5); // Range: 1 - 3.5
+
         return baseLevelMultiplier * wealthMultiplier;
     }
 

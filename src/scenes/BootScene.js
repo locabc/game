@@ -48,7 +48,7 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('RockCollectorsBook', 'images/rock_collectors_book.png');
         this.load.image('GemPolish', 'images/gem_polish.png');
         //ảnh random
-        for (let i = 1; i <= 16; i++) {
+        for (let i = 1; i <= 17; i++) {
             this.load.image(`Anh${i}`, `images/Anh${i}.png`);
         }
         // Spritesheets
