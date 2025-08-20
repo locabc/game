@@ -78,7 +78,7 @@ export default class PlayScene extends Phaser.Scene {
         this.events.on('entityGrabbed', this.onEntityGrabbed, this);
 
         this.createUI();
-        this.timeLeft = 5;
+        this.timeLeft = 60;
         this.timerEvent = this.time.addEvent({
         delay: 1000,
         callback: this.updateTimer,
@@ -259,6 +259,8 @@ export default class PlayScene extends Phaser.Scene {
                 } else {
                     // Continue to next level
                     this.player.goToNextLevel();
+                    // ✅ Save progress after advancing to next level
+                    this.player.saveProgress();
                     this.scene.start('TransitionScene', { type: 'MadeGoal', player: this.player });
                 }
             } else {
@@ -276,17 +278,20 @@ export default class PlayScene extends Phaser.Scene {
         if (entity.config.bonus > 0) {
             let finalBonus = entity.config.bonus;
             
+            // ✅ DEBUG: Show entity info
             // ✅ Apply shop item effects
-            if (this.player.hasRockCollectorsBook && entity.type.includes('Rock')) {
-                finalBonus *= 4; // Double rock value
+            const entityName = entity.texture.key;
+            
+            if (this.player.hasRockCollectorsBook && entityName.includes('Rock')) {
+                finalBonus *= 4; // 4x rock value
             }
             
-            if (this.player.hasGemPolish && (entity.type === 'Diamond' || entity.type.includes('Gold'))) {
+            if (this.player.hasGemPolish && (entityName === 'Diamond' || entityName.includes('Gold'))) {
                 finalBonus *= 1.5; // 50% more for gems/gold
             }
             
             if (this.player.hasLuckyClover && Math.random() < 0.3) {
-                finalBonus *= 2.5; // 30% chance to double any value
+                finalBonus *= 2; // Lucky bonus
             }
             
             // ✅ Lucky Star effect - guaranteed valuable items for next 3 grabs

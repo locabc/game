@@ -7,7 +7,7 @@ export default class ShopScene extends Phaser.Scene {
         this.shopItems = [];
         this.itemContainers = [];
         this.tooltipText = null;
-        this.purchasedItems = []; // ✅ Track purchased items
+        this.purchasedCount = {}; // ✅ Track số lượng đã mua mỗi item
     }
 
     init(data) {
@@ -28,6 +28,9 @@ export default class ShopScene extends Phaser.Scene {
         if (window.audioManager) {
             window.audioManager.forceResumeAudio();
         }
+
+        // ✅ Reset số lượng đã mua mỗi khi vào shop
+        this.purchasedCount = {};
 
         // Background
         this.add.image(0, 0, 'Shop').setOrigin(0);
@@ -272,11 +275,14 @@ export default class ShopScene extends Phaser.Scene {
             let sprite = null;
             if (this.textures.exists(item.image)) {
                 sprite = this.add.image(0, -10, item.image).setOrigin(0.5).setScale(0.6);
+                // Set alpha based on purchase status
+                const isPurchased = (this.purchasedCount[item.name] || 0) >= 1;
+                sprite.setAlpha(isPurchased ? 0.5 : 1.0);
                 container.add(sprite);
             }
 
             // Price text phía dưới - green/red color dựa trên khả năng mua
-            const isPurchased = (this.purchasedItems || []).includes(item.name);
+            const isPurchased = (this.purchasedCount[item.name] || 0) >= 1;
             const priceText = this.add.text(0, 30, `$${item.price}`, {
                 fontFamily: 'Kurland',
                 fontSize: '16px',
@@ -432,14 +438,14 @@ export default class ShopScene extends Phaser.Scene {
     buyItem(index) {
         const item = this.shopItems[index];
         
-        // ✅ Check if item already purchased
-        if (this.purchasedItems.includes(item.name)) {
+        // ✅ Check if item already purchased (max 1 per shop visit)
+        if ((this.purchasedCount[item.name] || 0) >= 1) {
             // Show message below the item that was clicked
             const itemUI = this.itemContainers[index];
-            const alreadyBoughtText = this.add.text(itemUI.x, itemUI.y + 50, 'Đã mua.', {
+            const alreadyBoughtText = this.add.text(itemUI.x, itemUI.y + 50, 'Đã mua rồi!', {
                 fontFamily: 'Kurland',
                 fontSize: '10px',
-                fill: '#00ff3cff',
+                fill: '#ff6600',
                 align: 'center'
             }).setOrigin(0.5);
             
@@ -447,7 +453,7 @@ export default class ShopScene extends Phaser.Scene {
             this.tweens.add({
                 targets: alreadyBoughtText,
                 alpha: 0,
-                duration: 2000,
+                duration: 3000,
                 onComplete: () => alreadyBoughtText.destroy()
             });
             return;
@@ -458,11 +464,14 @@ export default class ShopScene extends Phaser.Scene {
             this.player.money -= item.price;
             this.moneyText.setText(`$${this.player.money}`);
             
-            // ✅ Mark item as purchased
-            this.purchasedItems.push(item.name);
+            // ✅ Increment purchased count for this item
+            this.purchasedCount[item.name] = (this.purchasedCount[item.name] || 0) + 1;
             
             // Apply item effect
             item.effect();
+            
+            // ✅ Save progress immediately after buying item
+            this.player.saveProgress();
             
             // ✅ Update item display to show as purchased
             this.updateItemDisplay(index);
@@ -470,7 +479,7 @@ export default class ShopScene extends Phaser.Scene {
             // Update price colors
             this.itemContainers.forEach((itemUI, i) => {
                 const shopItem = this.shopItems[i];
-                const isPurchased = this.purchasedItems.includes(shopItem.name);
+                const isPurchased = (this.purchasedCount[shopItem.name] || 0) >= 1;
                 itemUI.priceText.setStyle({
                     fill: isPurchased ? '#888888' : (this.player.money >= this.shopItems[i].price ? '#00ff00' : '#ff0000')
                 });
@@ -545,11 +554,14 @@ export default class ShopScene extends Phaser.Scene {
         const itemUI = this.itemContainers[index];
         const item = this.shopItems[index];
         
-        // Only lower opacity of the item - no overlay text
+        // Check if item was purchased (count >= 1)
+        const isPurchased = (this.purchasedCount[item.name] || 0) >= 1;
+        
+        // Only lower opacity of the item if purchased
         if (itemUI.sprite) {
-            itemUI.sprite.setAlpha(0.5);
+            itemUI.sprite.setAlpha(isPurchased ? 0.5 : 1.0);
         }
-        itemUI.priceText.setStyle({ fill: '#888888' });
+        itemUI.priceText.setStyle({ fill: isPurchased ? '#888888' : '#00ff00' });
     }
 
     exitShop() {

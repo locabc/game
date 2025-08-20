@@ -4,7 +4,7 @@ export default class Player {
         this.realLevelStr = 'L1_1';
         this.goal = 0;
         this.goalAddOn = 500;
-        this._money = 3000; // Private money field
+        this._money = 0; // Private money field
         this.strength = 1;
         this.dynamiteCount = 0;
 
@@ -122,5 +122,68 @@ export default class Player {
 
     addDynamite(amount = 1) {
         this.dynamiteCount = Math.min(this.dynamiteCount + amount, 12);
+    }
+
+    // ✅ GAME PROGRESS: Save current progress to localStorage
+    saveProgress() {
+        const progress = {
+            level: this.level,
+            money: this._money,
+            dynamiteCount: this.dynamiteCount,
+            goal: this.goal,
+            realLevelStr: this.realLevelStr,
+            strength: this.strength, // ✅ Save strength value
+            // Save buffs
+            hasStrengthDrink: this.hasStrengthDrink,
+            hasLuckyClover: this.hasLuckyClover,
+            hasRockCollectorsBook: this.hasRockCollectorsBook,
+            hasGemPolish: this.hasGemPolish,
+            // Save special items
+            hasGoldenHook: this.hasGoldenHook,
+            hasMagnetStone: this.hasMagnetStone,
+            hasLuckyStar: this.hasLuckyStar,
+            timestamp: Date.now()
+        };
+        
+        localStorage.setItem('goldMinerProgress', JSON.stringify(progress));
+    }
+
+    // ✅ GAME PROGRESS: Load progress from localStorage
+    loadProgress() {
+        const saved = localStorage.getItem('goldMinerProgress');
+        if (!saved) return false;
+
+        try {
+            const progress = JSON.parse(saved);
+            
+            // Restore all saved data
+            this.level = progress.level || 1;
+            this._money = progress.money || 0;
+            this.dynamiteCount = progress.dynamiteCount || 0;
+            this.goal = progress.goal || 1600;
+            this.realLevelStr = progress.realLevelStr || 'L1_1';
+            this.strength = progress.strength || 1; // ✅ Restore strength value
+            
+            // Restore buffs
+            this.hasStrengthDrink = progress.hasStrengthDrink || false;
+            this.hasLuckyClover = progress.hasLuckyClover || false;
+            this.hasRockCollectorsBook = progress.hasRockCollectorsBook || false;
+            this.hasGemPolish = progress.hasGemPolish || false;
+            
+            // Restore special items
+            this.hasGoldenHook = progress.hasGoldenHook || false;
+            this.hasMagnetStone = progress.hasMagnetStone || false;
+            this.hasLuckyStar = progress.hasLuckyStar || false;
+            
+            return true;
+        } catch (error) {
+            console.error('Failed to load progress:', error);
+            return false;
+        }
+    }
+
+    // ✅ GAME PROGRESS: Clear saved progress (when game over/reset)
+    clearProgress() {
+        localStorage.removeItem('goldMinerProgress');
     }
 }

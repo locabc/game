@@ -56,6 +56,8 @@
     
     <!-- ✅ Service Worker for Audio Persistence -->
     <script>
+        // Tạm thời disable SW để tránh lỗi fetch
+        /*
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
@@ -67,6 +69,7 @@
                     });
             });
         }
+        */
     </script>
 </body>
 </html>

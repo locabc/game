@@ -123,6 +123,13 @@ export default class TransitionScene extends Phaser.Scene {
                 // ✅ Lưu highscore session khi thua
                 this.saveHighScore(this.player);
 
+                // ✅ Reset level về 1 khi thua
+                this.player.level = 1;
+                this.player.updateGoal(); // ✅ Reset goal về 1600 cho level 1
+                
+                // ✅ Clear saved progress - game over
+                this.player.clearProgress();
+
                 this.input.keyboard.once('keydown-ENTER', () => {
                     this.scene.start('MenuScene');
                 });
@@ -152,6 +159,13 @@ export default class TransitionScene extends Phaser.Scene {
 
                 // ✅ Lưu highscore session khi thắng hoàn toàn
                 this.saveHighScore(this.player);
+
+                // ✅ Reset level về 1 sau khi thắng toàn bộ game
+                this.player.level = 1;
+                this.player.updateGoal(); // ✅ Reset goal về 1600 cho level 1
+                
+                // ✅ Clear saved progress - game completed
+                this.player.clearProgress();
 
                 this.input.keyboard.once('keydown-ENTER', () => {
                     this.scene.start('MenuScene');

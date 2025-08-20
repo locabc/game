@@ -25,6 +25,24 @@ export default class MenuScene extends Phaser.Scene {
             this.game.player.dynamiteCount = 1;
         }
 
+        // ✅ Check for saved progress and update menu options
+        const hasSavedGame = localStorage.getItem('goldMinerProgress');
+        if (hasSavedGame) {
+            const progress = JSON.parse(hasSavedGame);
+            // When there's saved game, show both options
+            this.options = [
+                { text: 'Bắt Đầu', scene: 'TransitionScene', data: { type: 'NextGoal' }, action: 'newGame' },
+                { text: `Tiếp Tục (Lv${progress.level})`, scene: 'TransitionScene', data: { type: 'NextGoal' }, action: 'continue' },
+                { text: 'Điểm Cao', scene: 'HighScoreScene', data: null }
+            ];
+        } else {
+            // No saved game, show only start option
+            this.options = [
+                { text: 'Bắt Đầu', scene: 'TransitionScene', data: { type: 'NextGoal' }, action: 'newGame' },
+                { text: 'Điểm Cao', scene: 'HighScoreScene', data: null }
+            ];
+        }
+
         // Vẽ nền và tiêu đề game (nếu có)
         this.add.image(0, 0, 'Menu').setOrigin(0);
         this.add.image(this.cameras.main.centerX, 20, 'Title').setOrigin(0.5, 0);
@@ -94,12 +112,39 @@ export default class MenuScene extends Phaser.Scene {
         const selected = this.options[this.selectedIndex];
         
         if (selected.scene) {
-            if (selected.text === 'Bắt Đầu') {
-                // Sử dụng player hiện tại hoặc tạo mới
+            if (selected.action === 'newGame') {
+                // Start new game - reset everything
                 const player = this.game.player || new Player();
+                
+                // Clear any existing progress
+                player.clearProgress();
+                
+                // Reset to level 1
                 player.dynamiteCount = 1;
+                player.level = 1;
+                player._money = 0;
+                player.updateGoal();
+                
                 this.game.player = player;
                 this.scene.start(selected.scene, { type: 'NextGoal', player: player });
+                
+            } else if (selected.action === 'continue') {
+                // Continue from saved progress
+                const player = this.game.player || new Player();
+                
+                const hasProgress = player.loadProgress();
+                if (hasProgress) {
+                    // Continue from saved progress
+                } else {
+                    // Fallback if no progress found
+                    player.dynamiteCount = 1;
+                    player.level = 1;
+                    player.updateGoal();
+                }
+                
+                this.game.player = player;
+                this.scene.start(selected.scene, { type: 'NextGoal', player: player });
+                
             } else {
                 // Handle other scenes like High Score
                 this.scene.start(selected.scene, selected.data);
