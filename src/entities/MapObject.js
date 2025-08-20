@@ -48,11 +48,14 @@ export class RandomEffectMapObject extends MapObject {
     onCollected(scene) {
         const roll = Math.random(); // random 0–1
         if (roll < 0.8) {
-            const moneyBonus = Phaser.Math.Between(500, 750);
+            // ✅ Calculate bonus based on level (every 5 levels +200)
+            const levelGroup = Math.ceil(scene.player.level / 5); // 1, 2, 3, 4, 5, 6 (for levels 1-5, 6-10, etc.)
+            const baseBonus = 300 + (levelGroup - 1) * 200; 
+            const moneyBonus = Phaser.Math.Between(baseBonus, baseBonus + 300);
             scene.player.money += moneyBonus;
             scene.moneyText.setText('$' + scene.player.money);
             scene.sound.play('Money');
-        } else if (roll < 0.9) {
+        } else if (roll < 0.92) {
             scene.player.addDynamite(1);
             if (scene.dynamiteText) {
                 scene.dynamiteText.setText('x' + scene.player.dynamiteCount);
@@ -62,7 +65,6 @@ export class RandomEffectMapObject extends MapObject {
             for (let i = 1; i <= 17; i++) {
             keys.push(`Anh${i}`);
             }
-            //const keys = ['Anh1', 'Anh2', 'Anh3', 'Anh4', 'Anh5', 'Anh6', 'Anh7', 'Anh8', 'Anh9', 'Anh10', 'Anh11', 'Anh12', 'Anh13', 'Anh14', 'Anh15', 'Anh16'];
             const imgKey = Phaser.Utils.Array.GetRandom(keys);
             const { width, height } = scene.scale.gameSize;
             // Tạo overlay đen phía sau ảnh
@@ -308,7 +310,7 @@ export class SpecialEffectMapObject extends MapObject {
         scene.timeLeft += this.config.timeAdd;
         scene.timeText.setText('Time: ' + scene.timeLeft);
         
-        const text = scene.add.text(scene.cameras.main.centerX, 60, '+10 Giây! ⏰', {
+        const text = scene.add.text(scene.cameras.main.centerX, 60, '+20 Giây! ⏰', {
             fontFamily: 'Kurland',
             fontSize: '16px',
             fill: '#05dc30ff',
@@ -319,26 +321,6 @@ export class SpecialEffectMapObject extends MapObject {
             targets: text,
             alpha: 0,
             y: 30,
-            duration: 3000,
-            onComplete: () => text.destroy()
-        });
-    }
-
-    activateMagnetPull(scene) {
-        scene.player.hasMagnetStone = true;
-        scene.player.magnetRadius = this.config.radius;
-        scene.player.magnetTimer = 20000; // 20 seconds
-
-        const text = scene.add.text(scene.cameras.main.centerX, 60, 'Hút vật phẩm nhỏ!🧲', {
-            fontFamily: 'Kurland',
-            fontSize: '14px',
-            fill: '#05dc30ff',
-            align: 'center'
-        }).setOrigin(0.5);
-        
-        scene.tweens.add({
-            targets: text,
-            alpha: 0,
             duration: 3000,
             onComplete: () => text.destroy()
         });
@@ -492,8 +474,9 @@ export class BossMoveAroundMapObject extends MoveAroundMapObject {
     }
 
     showBossDefeatEffect() {
-        // Victory message
-        const victoryText = this.scene.add.text(this.scene.cameras.main.centerX, 80, 'BOSS ĐÃ BỊ ĐÁNH BẠI! 🏆\n+2500 Gold!', {
+        // Victory message with dynamic bonus display
+        const bonusAmount = this.config.bonus || 2500;
+        const victoryText = this.scene.add.text(this.scene.cameras.main.centerX, 80, `BOSS ĐÃ BỊ ĐÁNH BẠI! 🏆\n+${bonusAmount} Gold!`, {
             fontFamily: 'Kurland',
             fontSize: '16px',
             fill: '#00ff00',

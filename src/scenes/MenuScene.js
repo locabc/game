@@ -1,4 +1,5 @@
 import Player from '../entities/Player.js';
+
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
@@ -16,6 +17,12 @@ export default class MenuScene extends Phaser.Scene {
         // ✅ Resume audio context when entering menu
         if (window.audioManager) {
             window.audioManager.forceResumeAudio();
+        }
+
+        // ✅ Initialize global player if not exists
+        if (!this.game.player) {
+            this.game.player = new Player();
+            this.game.player.dynamiteCount = 1;
         }
 
         // Vẽ nền và tiêu đề game (nếu có)
@@ -59,28 +66,7 @@ export default class MenuScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-UP', () => this.moveSelection(-1), this);
         this.input.keyboard.on('keydown-DOWN', () => this.moveSelection(1), this);
         this.input.keyboard.on('keydown-ENTER', this.selectOption, this);
-        this.input.keyboard.on('keydown-SPACE', this.selectOption, this);
-        
-        // Thêm nút bật âm thanh
-        const audioButton = this.add.text(this.cameras.main.centerX, 210, 'Nhấn để bật âm thanh 🔊', {
-            fontFamily: 'Kurland',
-            fontSize: '14px',
-            fill: '#ffaa00',
-            align: 'center'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        audioButton.on('pointerdown', () => {
-            if (window.audioManager) {
-                window.audioManager.forceResumeAudio().then(() => {
-                    audioButton.setText('Âm thanh đã bật ✅');
-                    audioButton.setStyle({ fill: '#00ff00' });
-                }).catch(() => {
-                    audioButton.setText('Lỗi âm thanh ❌');
-                    audioButton.setStyle({ fill: '#ff0000' });
-                });
-            }
-        });
-        
+        this.input.keyboard.on('keydown-SPACE', this.selectOption, this);        
     }
     
     // Hàm di chuyển lựa chọn
@@ -109,8 +95,8 @@ export default class MenuScene extends Phaser.Scene {
         
         if (selected.scene) {
             if (selected.text === 'Bắt Đầu') {
-                // Tạo người chơi mới
-                const player = new Player();
+                // Sử dụng player hiện tại hoặc tạo mới
+                const player = this.game.player || new Player();
                 player.dynamiteCount = 1;
                 this.game.player = player;
                 this.scene.start(selected.scene, { type: 'NextGoal', player: player });

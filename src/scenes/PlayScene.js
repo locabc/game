@@ -1,3 +1,4 @@
+// src/scenes/PlayScene.js
 import * as C from '../utils/Constants.js';
 import Player from '../entities/Player.js';
 import Hook from '../entities/Hook.js';
@@ -31,6 +32,7 @@ export default class PlayScene extends Phaser.Scene {
         this.add.image(0, 40, levelData.type).setOrigin(0);
         this.add.image(0, 0, 'LevelCommonTop').setOrigin(0);
         
+        // ✅ Use default player sprite
         this.playerSprite = this.add.sprite(165, 39, 'playerSheet').setOrigin(0.5, 1);
         this.playerSprite.play('player-idle');
         
@@ -76,7 +78,7 @@ export default class PlayScene extends Phaser.Scene {
         this.events.on('entityGrabbed', this.onEntityGrabbed, this);
 
         this.createUI();
-        this.timeLeft = 60;
+        this.timeLeft = 5;
         this.timerEvent = this.time.addEvent({
         delay: 1000,
         callback: this.updateTimer,
@@ -94,9 +96,6 @@ export default class PlayScene extends Phaser.Scene {
         
         // ✅ Update special item timers
         this.updateSpecialItemTimers(delta);
-        
-        // ✅ Magnet Stone auto-pull logic
-        this.updateMagnetPull();
         
         if (this.dynamiteButton) {
             //this.dynamiteButton.visible = this.player.dynamiteCount > 0; // Chỉ kiểm tra dynamiteCount
@@ -130,133 +129,6 @@ export default class PlayScene extends Phaser.Scene {
             }
         }
 
-        // Magnet timer
-        if (this.player.hasMagnetStone && this.player.magnetTimer > 0) {
-            this.player.magnetTimer -= delta;
-            if (this.player.magnetTimer <= 0) {
-                this.player.hasMagnetStone = false;
-                // Show expiry message
-                const text = this.add.text(this.cameras.main.centerX, 70, 'ĐÃ HẾT HIỆU LỰC', {
-                    fontFamily: 'Kurland',
-                    fontSize: '12px',
-                    fill: '#14ce68ff'
-                }).setOrigin(0.5);
-                
-                this.tweens.add({
-                    targets: text,
-                    alpha: 0,
-                    duration: 3000,
-                    onComplete: () => text.destroy()
-                });
-            }
-        }
-    }
-
-    updateMagnetPull() {
-        // ✅ Magnet Stone auto-pull small items toward hook
-        if (this.player.hasMagnetStone && this.player.magnetRadius > 0) {
-            const itemsToAutoCollect = [];
-            
-            this.mapObjects.getChildren().forEach(obj => {
-                // Only pull small/light objects
-                if (obj.config && obj.config.mass <= 3.5 && obj.body.enable !== false) {
-                    const distance = Phaser.Math.Distance.Between(
-                        this.hook.sprite.x, this.hook.sprite.y, 
-                        obj.x, obj.y
-                    );
-                    
-                    // If hook is free (at start position) and item is close - normal grab
-                    if (distance <= 30 && !this.hook.grabbedEntity && this.hook.hookLength === 0) {
-                        obj.grabbed(); // Trigger normal grab behavior
-                    }
-                    // If hook is back to start position and item is close - auto-collect
-                    else if (distance <= 30 && this.hook.hookLength === 0) {
-                        itemsToAutoCollect.push(obj);
-                    }
-                    // Pull if within magnet radius
-                    else if (distance <= this.player.magnetRadius && distance > 20) {
-                        const angle = Phaser.Math.Angle.Between(
-                            obj.x, obj.y, 
-                            this.hook.sprite.x, this.hook.sprite.y
-                        );
-                        const pullStrength = 2; // Pull speed
-                        
-                        obj.x += Math.cos(angle) * pullStrength;
-                        obj.y += Math.sin(angle) * pullStrength;
-                    }
-                }
-            });
-            
-            // Auto-collect items when hook has finished its pulling cycle
-            itemsToAutoCollect.forEach(obj => {
-                if (obj.config.bonus > 0) {
-                    let finalBonus = obj.config.bonus;
-                    
-                    // Apply shop bonuses (same as onEntityGrabbed)
-                    if (this.player.hasRockCollectorsBook && obj.type.includes('Rock')) {
-                        finalBonus *= 4;
-                    }
-                    if (this.player.hasGemPolish && (obj.type === 'Diamond' || obj.type.includes('Gold'))) {
-                        finalBonus *= 1.5;
-                    }
-                    if (this.player.hasLuckyClover && Math.random() < 0.3) {
-                        finalBonus *= 2.5;
-                    }
-                    
-                    this.player.money += Math.round(finalBonus);
-                    this.moneyText.setText('$' + this.player.money);
-                    
-                    // Play sound
-                    if (obj.config.bonusType && this.sound.get(obj.config.bonusType)) {
-                        this.sound.play(obj.config.bonusType);
-                    }
-                    
-                    // Enhanced collection effect - bigger and longer lasting
-                    const collectText = this.add.text(obj.x, obj.y - 20, `🧲+$${Math.round(finalBonus)}`, {
-                        fontFamily: 'Kurland',
-                        fontSize: '16px',
-                        fill: '#00ffff',
-                        stroke: '#000000',
-                        strokeThickness: 2
-                    }).setOrigin(0.5);
-                    
-                    this.tweens.add({
-                        targets: collectText,
-                        alpha: 0,
-                        y: obj.y - 60,
-                        scale: 1.5,
-                        duration: 2500,
-                        ease: 'Power2',
-                        onComplete: () => collectText.destroy()
-                    });
-                    
-                    // Sparkle effect for magnet collection
-                    for (let i = 0; i < 6; i++) {
-                        const sparkle = this.add.image(obj.x, obj.y, 'light');
-                        sparkle.setScale(0.3);
-                        sparkle.setTint(0x00ffff);
-                        
-                        this.tweens.add({
-                            targets: sparkle,
-                            x: obj.x + Phaser.Math.Between(-30, 30),
-                            y: obj.y + Phaser.Math.Between(-30, 30),
-                            scale: 0,
-                            alpha: 0,
-                            duration: 1000,
-                            ease: 'Power2',
-                            onComplete: () => sparkle.destroy()
-                        });
-                    }
-                }
-                
-                // Check for special effects
-                if (typeof obj.onCollected === 'function') {           
-                    obj.onCollected(this);         
-                }
-                
-                obj.destroy();
-            });
-        }
     }
 
     updatePlayerAnimation() {
@@ -319,8 +191,24 @@ export default class PlayScene extends Phaser.Scene {
     spawnBossIfNeeded() {
         // Boss appears on level 5, 10, 15, 20, etc.
         if (this.player.level % 5 === 0) {
-            const config = entityConfig['BossMole'];
+            const config = { ...entityConfig['BossMole'] }; // Clone config
             if (config) {
+                // ✅ Calculate bonus and HP based on level
+                const level = this.player.level;
+                
+                // Bonus scaling: L5=2000, L10=2300, L15=2600, L20=3000, L25=3500
+                if (level === 5) config.bonus = 2000;
+                else if (level === 10) config.bonus = 2300;
+                else if (level === 15) config.bonus = 2600;
+                else if (level === 20) config.bonus = 3000;
+                else if (level === 25) config.bonus = 3500;
+                else if (level >= 30) config.bonus = 4000; // Future levels
+                
+                // HP scaling: L5-15=3HP, L20=4HP, L25-30=5HP
+                if (level <= 15) config.hp = 3;
+                else if (level === 20) config.hp = 4;
+                else if (level >= 25) config.hp = 5;
+                
                 // Spawn boss in center-bottom area
                 const x = Phaser.Math.Between(120, 200);
                 const y = Phaser.Math.Between(160, 190);

@@ -1,3 +1,5 @@
+import Player from '../entities/Player.js';
+
 export default class ShopScene extends Phaser.Scene {
     constructor() {
         super({ key: 'ShopScene' });
@@ -5,12 +7,20 @@ export default class ShopScene extends Phaser.Scene {
         this.shopItems = [];
         this.itemContainers = [];
         this.tooltipText = null;
+        this.purchasedItems = []; // ✅ Track purchased items
     }
 
     init(data) {
         // Nhận player data từ scene trước
-        this.player = data.player;
-        this.currentLevel = data.currentLevel || 1;
+        this.player = data?.player;
+        
+        // ✅ Fallback: tạo player mới nếu không có
+        if (!this.player) {
+            console.warn('ShopScene: No player data received, creating new player');
+            this.player = new Player();
+        }
+        
+        this.currentLevel = data?.currentLevel || 1;
     }
 
     create() {
@@ -26,7 +36,7 @@ export default class ShopScene extends Phaser.Scene {
         this.add.image(160, 195, 'Table').setOrigin(0.5, 0.5);
         
         // Shopkeeper sprite - positioned like in the image
-        const shopkeeper = this.add.sprite(280, 180, 'shopkeeperSheet').setOrigin(0.5, 1);
+        const shopkeeper = this.add.sprite(290, 175, 'shopkeeperSheet').setOrigin(0.5, 1);
         
         // Tạo animation cho shopkeeper nếu chưa có
         if (!this.anims.exists('shopkeeper-idle')) {
@@ -40,8 +50,8 @@ export default class ShopScene extends Phaser.Scene {
         shopkeeper.play('shopkeeper-idle');
 
         // ✅ Dialogue bubble với text bằng tiếng Việt
-        const bubble = this.add.image(200, 100, 'DialogueBubble').setOrigin(0.5);
-        const bubbleText = this.add.text(200, 95, 'Nhấp vào vật phẩm để mua.\nNhấp "Qua Màn" khi sẵn sàng.', {
+        const bubble = this.add.image(170, 100, 'DialogueBubble').setOrigin(0.5);
+        const bubbleText = this.add.text(170, 95, 'Nhấp vào vật phẩm để mua.\nNhấp "Qua Màn" khi sẵn sàng.', {
             fontFamily: 'Kurland',
             fontSize: '12px',
             fill: '#000000',
@@ -259,16 +269,18 @@ export default class ShopScene extends Phaser.Scene {
             const container = this.add.container(x, y);
             
             // Item icon - larger như trong ảnh
+            let sprite = null;
             if (this.textures.exists(item.image)) {
-                const icon = this.add.image(0, -10, item.image).setOrigin(0.5).setScale(0.6);
-                container.add(icon);
+                sprite = this.add.image(0, -10, item.image).setOrigin(0.5).setScale(0.6);
+                container.add(sprite);
             }
 
             // Price text phía dưới - green/red color dựa trên khả năng mua
+            const isPurchased = (this.purchasedItems || []).includes(item.name);
             const priceText = this.add.text(0, 30, `$${item.price}`, {
                 fontFamily: 'Kurland',
                 fontSize: '16px',
-                fill: this.player.money >= item.price ? '#00ff00' : '#ff0000',
+                fill: isPurchased ? '#888888' : (this.player.money >= item.price ? '#00ff00' : '#ff0000'),
                 align: 'center'
             }).setOrigin(0.5);
             container.add(priceText);
@@ -341,16 +353,23 @@ export default class ShopScene extends Phaser.Scene {
             });
             container.add(hitArea);
 
-            this.itemContainers.push({ container, priceText });
+            // ✅ Store more detailed item UI references
+            this.itemContainers.push({ 
+                container, 
+                priceText, 
+                sprite,
+                x: x,
+                y: y
+            });
         });
 
         // ✅ Next Level button với text tiếng Việt
-        this.nextLevelButton = this.add.text(55, 95, 'Qua Màn', {
+        this.nextLevelButton = this.add.text(35, 95, 'Qua Màn', {
             fontFamily: 'Kurland',
-            fontSize: '16px',
+            fontSize: '12px',
             fill: '#ffffff',
             backgroundColor: '#00aa00',
-            padding: { x: 12, y: 6 }
+            padding: { x: 10, y: 8 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         this.nextLevelButton.on('pointerdown', () => this.exitShop());
@@ -413,18 +432,47 @@ export default class ShopScene extends Phaser.Scene {
     buyItem(index) {
         const item = this.shopItems[index];
         
+        // ✅ Check if item already purchased
+        if (this.purchasedItems.includes(item.name)) {
+            // Show message below the item that was clicked
+            const itemUI = this.itemContainers[index];
+            const alreadyBoughtText = this.add.text(itemUI.x, itemUI.y + 50, 'Đã mua.', {
+                fontFamily: 'Kurland',
+                fontSize: '10px',
+                fill: '#00ff3cff',
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            // Auto hide after 3 seconds
+            this.tweens.add({
+                targets: alreadyBoughtText,
+                alpha: 0,
+                duration: 2000,
+                onComplete: () => alreadyBoughtText.destroy()
+            });
+            return;
+        }
+        
         if (this.player.money >= item.price) {
             // Deduct money
             this.player.money -= item.price;
             this.moneyText.setText(`$${this.player.money}`);
             
+            // ✅ Mark item as purchased
+            this.purchasedItems.push(item.name);
+            
             // Apply item effect
             item.effect();
             
+            // ✅ Update item display to show as purchased
+            this.updateItemDisplay(index);
+            
             // Update price colors
             this.itemContainers.forEach((itemUI, i) => {
+                const shopItem = this.shopItems[i];
+                const isPurchased = this.purchasedItems.includes(shopItem.name);
                 itemUI.priceText.setStyle({
-                    fill: this.player.money >= this.shopItems[i].price ? '#00ff00' : '#ff0000'
+                    fill: isPurchased ? '#888888' : (this.player.money >= this.shopItems[i].price ? '#00ff00' : '#ff0000')
                 });
             });
             
@@ -490,6 +538,18 @@ export default class ShopScene extends Phaser.Scene {
                 this.sound.play('Low');
             }
         }
+    }
+
+    // ✅ Update item display to show purchased status
+    updateItemDisplay(index) {
+        const itemUI = this.itemContainers[index];
+        const item = this.shopItems[index];
+        
+        // Only lower opacity of the item - no overlay text
+        if (itemUI.sprite) {
+            itemUI.sprite.setAlpha(0.5);
+        }
+        itemUI.priceText.setStyle({ fill: '#888888' });
     }
 
     exitShop() {

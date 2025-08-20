@@ -4,7 +4,7 @@ export default class Player {
         this.realLevelStr = 'L1_1';
         this.goal = 0;
         this.goalAddOn = 500;
-        this._money = 0; // Private money field
+        this._money = 3000; // Private money field
         this.strength = 1;
         this.dynamiteCount = 0;
 
@@ -69,6 +69,26 @@ export default class Player {
 
     reachGoal() {
         return this.money >= this.goal;
+    }
+    
+    // ✅ NEW: Skin management methods
+    setSkin(skinId) {
+        if (this.unlockedSkins.includes(skinId)) {
+            this.currentSkin = skinId;
+        }
+    }
+    
+    unlockSkin(skinId) {
+        if (!this.unlockedSkins.includes(skinId)) {
+            this.unlockedSkins.push(skinId);
+        }
+    }
+    
+    getSkinConfig() {
+        return {
+            currentSkin: this.currentSkin,
+            unlockedSkins: this.unlockedSkins
+        };
     }
     
     goToNextLevel() {
