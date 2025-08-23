@@ -126,6 +126,7 @@ export class MoveAroundMapObject extends MapObject {
         this.speed = config.speed;
         this.moveRange = config.moveRange;
         this.originalX = this.x;
+        this.isFrozen = false; // Time freeze status
 
         this.setVelocityX(this.speed * 50 * this.dir);
         this.setFlipX(this.dir === -1);
@@ -135,6 +136,11 @@ export class MoveAroundMapObject extends MapObject {
 
     preUpdate(time, delta) {
         super.preUpdate(time, delta);
+
+        // Skip movement if frozen
+        if (this.isFrozen) {
+            return;
+        }
 
         // Di chuyển bằng cách thay đổi tọa độ X
         this.x += this.speed * this.dir;
@@ -146,6 +152,18 @@ export class MoveAroundMapObject extends MapObject {
             this.dir = 1;
             this.setFlipX(true);
         }
+    }
+
+    freezeMovement() {
+        this.isFrozen = true;
+        // Add visual effect - tint blue for frozen
+        this.setTint(0x00bfff);
+    }
+
+    unfreezeMovement() {
+        this.isFrozen = false;
+        // Remove tint
+        this.clearTint();
     }
 }
 
@@ -516,5 +534,18 @@ export class BossMoveAroundMapObject extends MoveAroundMapObject {
             this.bossGlow.destroy();
         }
         super.destroy();
+    }
+
+    // Override freeze methods to handle boss tinting properly
+    freezeMovement() {
+        this.isFrozen = true;
+        // Mix blue with orange for frozen boss
+        this.setTint(0x00aacc); // Blue-orange mix
+    }
+
+    unfreezeMovement() {
+        this.isFrozen = false;
+        // Return to boss orange tint
+        this.setTint(0xff6600);
     }
 }

@@ -195,6 +195,17 @@ export default class TransitionScene extends Phaser.Scene {
 
     // ✅ Methods để handle shop
     openShop() {
+        // Check if slot machine should appear (after completing level 5: at level 6, 11, 16, 21...)
+        if (this.player.level >= 6 && (this.player.level - 1) % 5 === 0) {
+            // Go to slot machine first
+            this.scene.start('SlotMachineScene', { player: this.player });
+        } else {
+            // Go directly to shop
+            this.startShopScene();
+        }
+    }
+
+    startShopScene() {
         // Launch shop scene với current level data
         const shopScene = this.scene.get('ShopScene') || this.scene.add('ShopScene', ShopScene, false);
         this.scene.pause();

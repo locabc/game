@@ -568,11 +568,12 @@ export default class ShopScene extends Phaser.Scene {
         // Hide tooltip khi thoát
         this.hideTooltip();
         
-        // Emit event to notify PlayScene that shop is closed
-        this.events.emit('shop-closed', this.player);
+        // Save progress before leaving shop
+        this.player.saveProgress();
         
-        // Close shop scene (return to paused PlayScene)
-        this.scene.stop();
+        // Check if we came from slot machine or direct transition
+        // Either way, go to next level goal
+        this.scene.start('TransitionScene', { type: 'NextGoal', player: this.player });
     }
 
     // ✅ Thông tin giá trị của vật phẩm để người chơi tính toán

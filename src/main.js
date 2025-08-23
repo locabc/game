@@ -4,6 +4,7 @@ import PlayScene from './scenes/PlayScene.js';
 import TransitionScene from './scenes/TransitionScene.js';
 import HighScoreScene from './scenes/HighScoreScene.js';
 import ShopScene from './scenes/ShopScene.js';
+import SlotMachineScene from './scenes/SlotMachineScene.js';
 import * as C from './utils/Constants.js';
 
 const config = {
@@ -34,7 +35,8 @@ const config = {
         PlayScene,
         TransitionScene,
         HighScoreScene,
-        ShopScene
+        ShopScene,
+        SlotMachineScene
     ]
 };
 

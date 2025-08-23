@@ -15,6 +15,7 @@ export default class PlayScene extends Phaser.Scene {
     init(data) {
         this.player = data.player;
         this.game.player = data.player;
+        this.isTimeFrozen = false; // Initialize time freeze state
     }
     
     create() {
@@ -44,11 +45,12 @@ export default class PlayScene extends Phaser.Scene {
         this.physics.add.overlap(this.hook.sprite, this.mapObjects, (hookSprite, mapObj) => {
             mapObj.grabbed();
         });
-        this.input.on('pointerdown', () => {
-        if (!this.isImageOpen) {
-            this.hook.startGrabbing();
-        }
-    }, this);
+        this.input.on('pointerdown', (pointer) => {
+            // Only allow hook grabbing if clicking in game area (below UI area y > 40)
+            if (!this.isImageOpen && pointer.y > 40) {
+                this.hook.startGrabbing();
+            }
+        }, this);
 
     // 2. Thêm nút bấm thuốc nổ
     const dynamiteButton = this.add.image(this.playerSprite.x + 40, this.playerSprite.y - 17, 'Dynamite')
@@ -78,7 +80,7 @@ export default class PlayScene extends Phaser.Scene {
         this.events.on('entityGrabbed', this.onEntityGrabbed, this);
 
         this.createUI();
-        this.timeLeft = 60;
+        this.timeLeft = 7;
         this.timerEvent = this.time.addEvent({
         delay: 1000,
         callback: this.updateTimer,
@@ -248,6 +250,11 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     updateTimer() {
+        // Don't decrease time if time is frozen
+        if (this.isTimeFrozen) {
+            return;
+        }
+        
         this.timeLeft--;
         this.timeText.setText('Time: ' + this.timeLeft);
         if (this.timeLeft <= 0) {
@@ -364,8 +371,147 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     // Helper method to update UI when returning from shop
-    updatePlayerStats() {
-        this.moneyText.setText('$' + this.player.money);
-        this.dynamiteText.setText('x' + this.player.dynamiteCount);  
+    // Gọi hàm này mỗi khi muốn cập nhật UI (sau shop, sau khi mua item, sau khi dùng item...)
+updatePlayerStats() {
+    // Cập nhật tiền và dynamite
+    this.moneyText.setText('$' + this.player.money);
+    this.dynamiteText.setText('x' + this.player.dynamiteCount);
+
+    // Quản lý UI Time Freeze
+    if (this.player.hasTimeFreezeItem && this.player.hasTimeFreezeItem > 0) {
+        // Nếu chưa có icon thì tạo
+        if (!this.timeFreezeIcon) {
+            this.timeFreezeIcon = this.add.text(80, 20, '❄️', {
+                fontFamily: 'Arial',
+                fontSize: '13px'
+            }).setInteractive({ 
+                useHandCursor: true,
+                hitArea: new Phaser.Geom.Rectangle(-5, -5, 25, 25),
+                hitAreaCallback: Phaser.Geom.Rectangle.Contains
+            });
+
+            this.timeFreezeIcon.on('pointerdown', (pointer, localX, localY, event) => {
+                event.stopPropagation(); 
+                this.activateTimeFreeze();
+            });
+        } else {
+            this.timeFreezeIcon.setVisible(true);
+        }
+
+        // Nếu chưa có text số lượng thì tạo
+        if (!this.timeFreezeText) {
+            this.timeFreezeText = this.add.text(100, 25, 'x' + this.player.hasTimeFreezeItem, {
+                fontFamily: 'visitor1',
+                fontSize: '15px',
+                fill: '#815504ff'
+            });
+        } else {
+            this.timeFreezeText.setText('x' + this.player.hasTimeFreezeItem);
+            this.timeFreezeText.setVisible(true);
+        }
+    } else {
+        // Nếu không có item thì ẩn icon + text
+        if (this.timeFreezeIcon) this.timeFreezeIcon.setVisible(false);
+        if (this.timeFreezeText) this.timeFreezeText.setVisible(false);
     }
+}
+
+
+   activateTimeFreeze() {
+    // Kiểm tra có item không
+    if (!this.player.hasTimeFreezeItem || this.player.hasTimeFreezeItem <= 0) {
+        return;
+    }
+
+    // Trừ 1 item Time Freeze
+    this.player.hasTimeFreezeItem--;
+    this.updatePlayerStats(); // Cập nhật lại UI
+
+    // Bật trạng thái đóng băng
+    this.isTimeFrozen = true;
+
+    // Đóng băng tất cả object động
+    this.mapObjects.children.entries.forEach(obj => {
+        if (obj instanceof MoveAroundMapObject || obj instanceof BossMoveAroundMapObject) {
+            console.log('Freezing object:', obj.constructor.name);
+            obj.freezeMovement();
+        }
+    });
+
+    // Hiển thị hiệu ứng thông báo
+    const freezeDuration = 10; // giây
+    this.showTimeFreezeEffect(freezeDuration);
+
+    // Sau X giây thì tự động hủy đóng băng
+    this.time.delayedCall(freezeDuration * 1000, () => {
+        this.deactivateTimeFreeze();
+    });
+}
+
+showTimeFreezeEffect(duration) {
+    // Overlay xanh mờ phủ màn hình
+    const freezeOverlay = this.add.rectangle(
+        0, 0,
+        C.VIRTUAL_WIDTH, C.VIRTUAL_HEIGHT,
+        0x00bfff, 0.3
+    ).setOrigin(0);
+
+    // Thông báo "Time frozen"
+    const freezeMessage = this.add.text(
+        C.VIRTUAL_WIDTH / 2, 60,
+        `Ngưng Đọng Thời Gian! ${duration} giây`,
+        {
+            fontFamily: 'Kurland',
+            fontSize: '13px',
+            fill: '#00bfff',
+            stroke: '#000000',
+            strokeThickness: 3,
+            align: 'center'
+        }
+    ).setOrigin(0.5);
+
+    // Làm overlay + message mờ dần sau 3 giây
+    this.tweens.add({
+        targets: [freezeOverlay, freezeMessage],
+        alpha: 0,
+        duration: 2000,
+        onComplete: () => {
+            freezeOverlay.destroy();
+            freezeMessage.destroy();
+        }
+    });
+}
+
+deactivateTimeFreeze() {
+    this.isTimeFrozen = false;
+
+    // Cho object động hoạt động lại
+    this.mapObjects.children.entries.forEach(obj => {
+        if (obj instanceof MoveAroundMapObject || obj instanceof BossMoveAroundMapObject) {
+            console.log('Unfreezing object:', obj.constructor.name);
+            obj.unfreezeMovement();
+        }
+    });
+
+    // Hiện thông báo "Thời gian trở lại!"
+    const unfreezeMessage = this.add.text(
+        C.VIRTUAL_WIDTH / 2, 100,
+        'Thời gian trở lại!',
+        {
+            fontFamily: 'visitor1',
+            fontSize: '16px',
+            fill: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 2
+        }
+    ).setOrigin(0.5);
+
+    this.tweens.add({
+        targets: unfreezeMessage,
+        alpha: 0,
+        y: 80,
+        duration: 2000,
+        onComplete: () => unfreezeMessage.destroy()
+    });
+}
 }

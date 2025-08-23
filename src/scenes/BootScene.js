@@ -78,6 +78,13 @@ export default class BootScene extends Phaser.Scene {
         this.load.audio('GoalMusic', 'audios/goal.mp3');
         this.load.audio('MadeGoalMusic', 'audios/made_goal.mp3');
         
+        // ✅ Slot Machine Audio Files (for future use)
+        this.load.audio('SlotSpin', 'audios/slot_spin.mp3');
+        this.load.audio('ReelStop', 'audios/reel_stop.mp3');
+        this.load.audio('SmallWin', 'audios/small_win.mp3');
+        this.load.audio('BigWin', 'audios/big_win.mp3');
+        this.load.audio('Jackpot', 'audios/jackpot.mp3');
+        
         // ✅ Listen for load completion
         this.load.on('complete', () => {
             // All assets loaded successfully
