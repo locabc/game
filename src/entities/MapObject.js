@@ -49,7 +49,7 @@ export class RandomEffectMapObject extends MapObject {
     // Hàm đặc biệt được gọi khi thu thập xong
     onCollected(scene) {
         const roll = Math.random(); // random 0–1
-        if (roll < 0.1) {
+        if (roll < 0.85) {
             // ✅ Calculate bonus based on level (every 5 levels +200)
             const levelGroup = Math.ceil(scene.player.level / 5); // 1, 2, 3, 4, 5, 6 (for levels 1-5, 6-10, etc.)
             const baseBonus = 300 + (levelGroup - 1) * 200; 
@@ -57,7 +57,7 @@ export class RandomEffectMapObject extends MapObject {
             scene.player.money += moneyBonus;
             scene.moneyText.setText('$' + scene.player.money);
             scene.sound.play('Money');
-        } else if (roll < 0.2) {
+        } else if (roll < 0.92) {
             scene.player.addDynamite(1);
             if (scene.dynamiteText) {
                 scene.dynamiteText.setText('x' + scene.player.dynamiteCount);
