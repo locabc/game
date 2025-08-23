@@ -1172,13 +1172,17 @@ export default class SlotMachineScene extends Phaser.Scene {
         
         // Close button hover effects
         this.infoCloseButton.on('pointerover', () => {
-            this.infoCloseButton.setFillStyle(0xec7063);
-            this.infoCloseButton.setScale(1.1);
+            if (this.infoCloseButton && this.infoCloseButton.active) {
+                this.infoCloseButton.setFillStyle(0xec7063);
+                this.infoCloseButton.setScale(1.1);
+            }
         });
         
         this.infoCloseButton.on('pointerout', () => {
-            this.infoCloseButton.setFillStyle(0xe74c3c);
-            this.infoCloseButton.setScale(1.0);
+            if (this.infoCloseButton && this.infoCloseButton.active) {
+                this.infoCloseButton.setFillStyle(0xe74c3c);
+                this.infoCloseButton.setScale(1.0);
+            }
         });
         
         // Animation: Fade in and scale up
@@ -1339,21 +1343,43 @@ export default class SlotMachineScene extends Phaser.Scene {
         }
         
         // Remove close button events if exists
-        if (this.infoCloseButton) {
+        if (this.infoCloseButton && this.infoCloseButton.active) {
             this.infoCloseButton.removeAllListeners();
             this.infoCloseButton.disableInteractive();
+            // Immediately null the reference to prevent race conditions
+            const button = this.infoCloseButton;
+            this.infoCloseButton = null;
+            // Then destroy after nulling
+            if (button.scene) {
+                button.destroy();
+            }
         }
     }
     
     finalizeInfoPanelCleanup() {
-        // Clear references
-        this.infoOverlay = null;
-        this.infoPanel = null;
-        this.infoPanelTitle = null;
-        this.infoPanelContent = null;
-        this.infoCloseButton = null;
-        this.infoCloseButtonText = null;
-        this.contentMask = null;
+        // Safely clear references without destroying (already done in animation)
+        if (this.infoOverlay && this.infoOverlay.scene) {
+            this.infoOverlay = null;
+        }
+        if (this.infoPanel && this.infoPanel.scene) {
+            this.infoPanel = null;
+        }
+        if (this.infoPanelTitle && this.infoPanelTitle.scene) {
+            this.infoPanelTitle = null;
+        }
+        if (this.infoPanelContent && this.infoPanelContent.scene) {
+            this.infoPanelContent = null;
+        }
+        if (this.infoCloseButton && this.infoCloseButton.scene) {
+            this.infoCloseButton = null;
+        }
+        if (this.infoCloseButtonText && this.infoCloseButtonText.scene) {
+            this.infoCloseButtonText = null;
+        }
+        if (this.contentMask && this.contentMask.scene) {
+            this.contentMask = null;
+        }
+        
         this.scrollOffset = 0;
         this.infoScrollHandlers = null;
         

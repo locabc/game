@@ -80,7 +80,7 @@ export default class PlayScene extends Phaser.Scene {
         this.events.on('entityGrabbed', this.onEntityGrabbed, this);
 
         this.createUI();
-        this.timeLeft = 60;
+        this.timeLeft = 10;
         this.timerEvent = this.time.addEvent({
         delay: 1000,
         callback: this.updateTimer,

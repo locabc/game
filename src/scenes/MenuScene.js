@@ -121,8 +121,8 @@ export default class MenuScene extends Phaser.Scene {
                 
                 // Reset to level 1
                 player.dynamiteCount = 1;
-                player.level = 1;
-                player._money = 0;
+                player.level = 5;
+                player._money = 100000;
                 player.updateGoal();
                 
                 this.game.player = player;

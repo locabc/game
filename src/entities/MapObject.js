@@ -1,3 +1,5 @@
+import * as C from '../utils/Constants.js';
+
 export class MapObject extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, key) {
         super(scene, x, y, key);
@@ -47,7 +49,7 @@ export class RandomEffectMapObject extends MapObject {
     // Hàm đặc biệt được gọi khi thu thập xong
     onCollected(scene) {
         const roll = Math.random(); // random 0–1
-        if (roll < 0.8) {
+        if (roll < 0.1) {
             // ✅ Calculate bonus based on level (every 5 levels +200)
             const levelGroup = Math.ceil(scene.player.level / 5); // 1, 2, 3, 4, 5, 6 (for levels 1-5, 6-10, etc.)
             const baseBonus = 300 + (levelGroup - 1) * 200; 
@@ -55,7 +57,7 @@ export class RandomEffectMapObject extends MapObject {
             scene.player.money += moneyBonus;
             scene.moneyText.setText('$' + scene.player.money);
             scene.sound.play('Money');
-        } else if (roll < 0.92) {
+        } else if (roll < 0.2) {
             scene.player.addDynamite(1);
             if (scene.dynamiteText) {
                 scene.dynamiteText.setText('x' + scene.player.dynamiteCount);
@@ -66,13 +68,20 @@ export class RandomEffectMapObject extends MapObject {
             keys.push(`Anh${i}`);
             }
             const imgKey = Phaser.Utils.Array.GetRandom(keys);
-            const { width, height } = scene.scale.gameSize;
+            
+            // Use virtual dimensions for consistent display across devices
+            const width = C.VIRTUAL_WIDTH;
+            const height = C.VIRTUAL_HEIGHT;
+            
             // Tạo overlay đen phía sau ảnh
             const overlay = scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
             overlay.setDepth(1000); // Đặt ở layer cao
+            overlay.setScrollFactor(0); // Fixed to camera
+            
             // Thêm ảnh cover full màn hình
             const img = scene.add.image(width / 2, height / 2, imgKey).setOrigin(0.5);
             img.setDepth(1001); // Đặt ảnh cao hơn overlay
+            img.setScrollFactor(0); // Fixed to camera
             
             // ✅ Multiple methods để làm ảnh smooth
             img.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
@@ -88,11 +97,22 @@ export class RandomEffectMapObject extends MapObject {
             const source = tex.getSourceImage();
             const imgW = source.width;
             const imgH = source.height;
-            // Fit ảnh vào khung với smooth scaling
+            
+            // Mobile-optimized scaling - cover full screen properly
             const scaleX = width / imgW;
             const scaleY = height / imgH;
-            const scale = Math.min(scaleX, scaleY);
+            
+            // Use cover scaling (fills entire screen, may crop some parts)
+            const scale = Math.max(scaleX, scaleY);
             img.setScale(scale);
+            
+            // Ensure image covers the entire screen on mobile
+            if (scale * imgW < width || scale * imgH < height) {
+                const coverScaleX = width / imgW;
+                const coverScaleY = height / imgH;
+                const coverScale = Math.max(coverScaleX, coverScaleY);
+                img.setScale(coverScale);
+            }
 
             // Pause timer
             if (scene.timerEvent) scene.timerEvent.paused = true;
@@ -103,6 +123,7 @@ export class RandomEffectMapObject extends MapObject {
         // Tạo invisible overlay để chặn input xuống game phía dưới
         const inputBlocker = scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.01);
         inputBlocker.setDepth(999);
+        inputBlocker.setScrollFactor(0); // Fixed to camera
         inputBlocker.setInteractive();
 
         // Chỉ cho phép click vào ảnh để đóng
