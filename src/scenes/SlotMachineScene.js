@@ -4,13 +4,15 @@ import * as C from '../utils/Constants.js';
 export default class SlotMachineScene extends Phaser.Scene {
     constructor() {
         super({ key: 'SlotMachineScene' });
+        console.log('SlotMachineScene constructor called');
+        console.log('Scene constructor - this:', !!this, 'this.sys:', !!this.sys);
     }
 
     init(data) {
-        this.player = data.player;
-        this.game.player = data.player;
+        console.log('SlotMachineScene init called with data:', data);
+        console.log('Init - this:', !!this, 'this.sys:', !!this.sys, 'this.game:', !!this.game);
         
-        // Slot machine state
+    this.player = data.player;        // Slot machine state
         this.isSpinning = false;
         this.spinCost = 500;
         this.remainingSpins = 5; // Limit to 5 spins
@@ -24,9 +26,19 @@ export default class SlotMachineScene extends Phaser.Scene {
         this.lightEffects = [];
         this.coinRainTimer = null;
         this.tickingSound = null;
+        this.buttonPressed = false;
+        this.cleanupTimer = null;
+        this.infoPanelExists = false;
+        this.closeButtonHandlers = null;
+        this.panelCleanupComplete = false;
+        this.lastPanelActionTime = 0; // Thêm timestamp để kiểm soát tần suất đóng mở // Thêm cờ này để theo dõi quá trình dọn dẹp
     }
 
     create() {
+        console.log('SlotMachineScene create called');
+        console.log('Create - this:', !!this, 'this.sys:', !!this.sys, 'this.add:', !!this.add);
+        console.log('Create - scene key:', this.scene?.key, 'scene active:', this.scene?.isActive());
+        
         // Background
         this.add.rectangle(0, 0, C.VIRTUAL_WIDTH, C.VIRTUAL_HEIGHT, 0x1a1a2e).setOrigin(0);
         
@@ -224,12 +236,18 @@ export default class SlotMachineScene extends Phaser.Scene {
         // Button events
         this.spinButton.on('pointerdown', () => this.spin());
         this.exitButton.on('pointerdown', () => this.exitSlotMachine());
-        this.infoButton.on('pointerdown', () => this.showInfoPanel());
+        this.infoButton.on('pointerdown', () => {
+            console.log('Info button pointerdown, scene context:', !!this, !!this.sys);
+            this.showInfoPanel();
+        });
         
         // Touch/click events for mobile compatibility
         this.spinButton.on('pointerup', () => this.spin());
         this.exitButton.on('pointerup', () => this.exitSlotMachine());
-        this.infoButton.on('pointerup', () => this.showInfoPanel());
+        this.infoButton.on('pointerup', () => {
+            console.log('Info button pointerup, scene context:', !!this, !!this.sys);
+            this.showInfoPanel();
+        });
         
         // Button hover effects
         this.spinButton.on('pointerover', () => {
@@ -1074,15 +1092,98 @@ export default class SlotMachineScene extends Phaser.Scene {
     }
 
     showInfoPanel() {
+        // Kiểm tra nếu đang trong quá trình đóng panel - CHẶN việc mở
+        if (this.isClosingInfoPanel === 'in_progress') {
+            console.log('Panel đang trong quá trình đóng, KHÔNG thể mở panel mới');
+            return;
+        }
+        
+        // Kiểm tra nếu panel đã tồn tại
+        if (this.infoPanelExists && !this.panelCleanupComplete) {
+            console.log('Panel đã tồn tại và chưa được cleanup, KHÔNG mở panel mới');
+            return;
+        }
+        
+        // Cancel any lingering cleanup timers from a previous close
+        if (this.cleanupTimer) {
+            this.cleanupTimer.remove();
+            this.cleanupTimer = null;
+            console.log('Đã hủy cleanup timer còn sót lại');
+        }
+
+        if (!this.scene || !this.scene.isActive()) {
+            console.log('Scene không hoạt động, không thể mở panel');
+            return;
+        }
+        
+        // Force cleanup any existing panel trước khi tạo mới
+        if (this.infoOverlay || this.infoPanel || this.infoCloseButton) {
+            console.log('Phát hiện panel cũ vẫn còn, force cleanup trước khi tạo mới');
+            this.forceCleanupInfoPanel();
+        }
+        
+        // Throttling - chỉ cho phép đóng mở cách nhau ít nhất 500ms
+        const currentTime = this.time.now;
+        if (currentTime - this.lastPanelActionTime < 500) {
+            console.log('Thao tác quá nhanh, vui lòng chờ 500ms giữa các lần đóng/mở');
+            return;
+        }
+        this.lastPanelActionTime = currentTime;
+        console.log('showInfoPanel() called, scene context check:');
+        console.log('this exists:', !!this);
+        console.log('this.sys exists:', !!this.sys);
+        console.log('this.add exists:', !!this.add);
+        
+        // Reset closing flag and panel state
+        this.isClosingInfoPanel = false;
+        console.log('showInfoPanel() - Đang đặt infoPanelExists = true');
+        this.infoPanelExists = true;
+        this.panelCleanupComplete = false;
+        console.log('showInfoPanel() - Trạng thái sau khi reset:');
+        console.log('  - infoPanelExists:', this.infoPanelExists);
+        console.log('  - isClosingInfoPanel:', this.isClosingInfoPanel);
+        console.log('  - panelCleanupComplete:', this.panelCleanupComplete);
+        
+        this.debugPanelState();
+        
         // Create semi-transparent overlay to dim the background
         this.infoOverlay = this.add.rectangle(0, 0, C.VIRTUAL_WIDTH, C.VIRTUAL_HEIGHT, 0x000000, 0.8).setOrigin(0);
         this.infoOverlay.setInteractive(); // Block clicks to background
         
         // Allow closing panel by tapping overlay on mobile
-        const isMobileDevice = this.sys.game.device.input.touch;
+        const isMobileDevice = this.sys && this.sys.game && this.sys.game.device ? 
+            this.sys.game.device.input.touch : 
+            ('ontouchstart' in window || navigator.maxTouchPoints > 0); // Fallback detection
+        console.log('Mobile device detected:', isMobileDevice);
+        
         if (isMobileDevice) {
-            let overlayClosePressed = false;
-            this.infoOverlay.on('pointerdown', (pointer) => {
+            this.infoOverlay.on('pointerup', (pointer) => {
+                // KIỂM TRA ĐẦU TIÊN: Nếu đã cleanup hoàn toàn, KHÔNG làm gì cả
+                if (this.panelCleanupComplete) {
+                    console.log('panelCleanupComplete = true, BỎ QUA HOÀN TOÀN sự kiện overlay tap');
+                    return;
+                }
+                
+                // Đảm bảo scene vẫn còn hoạt động
+                if (!this.scene || !this.scene.isActive()) {
+                    console.log('Scene không còn hoạt động, bỏ qua sự kiện overlay tap');
+                    return;
+                }
+                
+                // Đảm bảo panel còn tồn tại
+                if (!this.infoPanelExists) {
+                    console.log('Panel không còn tồn tại, bỏ qua sự kiện overlay tap');
+                    return;
+                }
+                
+                // Kiểm tra panel có đang đóng không
+                if (this.isClosingInfoPanel === 'in_progress') {
+                    console.log('Panel đang đóng, bỏ qua sự kiện overlay tap');
+                    return;
+                }
+                
+                console.log('Overlay pointerup - pointer position:', pointer.x, pointer.y);
+                
                 // Only close if clicking outside the panel area
                 const panelBounds = {
                     left: 10,
@@ -1091,11 +1192,23 @@ export default class SlotMachineScene extends Phaser.Scene {
                     bottom: C.VIRTUAL_HEIGHT - 15
                 };
                 
-                if (pointer.x < panelBounds.left || pointer.x > panelBounds.right ||
-                    pointer.y < panelBounds.top || pointer.y > panelBounds.bottom) {
-                    if (!overlayClosePressed) {
-                        overlayClosePressed = true;
+                console.log('Panel bounds:', panelBounds);
+                
+                const isOutside = pointer.x < panelBounds.left || pointer.x > panelBounds.right ||
+                    pointer.y < panelBounds.top || pointer.y > panelBounds.bottom;
+                
+                console.log('Click is outside panel:', isOutside);
+                
+                if (isOutside) {
+                    if (this.infoOverlay && this.isClosingInfoPanel !== 'in_progress' && this.infoPanelExists) {
+                        console.log('Closing panel via overlay tap');
                         this.hideInfoPanel();
+                    } else if (this.isClosingInfoPanel === 'in_progress') {
+                        console.log('Already closing panel, ignoring overlay tap');
+                    } else if (!this.infoPanelExists) {
+                        console.log('Panel không tồn tại, bỏ qua overlay tap');
+                    } else {
+                        console.log('Cannot close - overlay missing');
                     }
                 }
             });
@@ -1177,7 +1290,9 @@ export default class SlotMachineScene extends Phaser.Scene {
         this.infoPanelContent.setMask(this.contentMask.createGeometryMask());
 
         // Close button (X) - optimized for mobile touch
-        const isMobile = this.sys.game.device.input.touch;
+        const isMobile = this.sys && this.sys.game && this.sys.game.device ? 
+            this.sys.game.device.input.touch : 
+            ('ontouchstart' in window || navigator.maxTouchPoints > 0); // Fallback detection
         const buttonSize = isMobile ? 30 : 20; // Larger on mobile
         const fontSize = isMobile ? '18px' : '15px';
         
@@ -1187,6 +1302,7 @@ export default class SlotMachineScene extends Phaser.Scene {
             hitArea: new Phaser.Geom.Rectangle(-5, -5, buttonSize + 10, buttonSize + 10), // Larger hit area for mobile
             hitAreaCallback: Phaser.Geom.Rectangle.Contains
         });
+        this.infoCloseButton.isCleanedUp = false; // Add the flag
         
         this.infoCloseButtonText = this.add.text(C.VIRTUAL_WIDTH - 22, 27, '✕', {
             fontFamily: 'Arial',
@@ -1198,64 +1314,205 @@ export default class SlotMachineScene extends Phaser.Scene {
         // Setup scrolling interaction
         this.setupScrolling(contentAreaHeight);
         
-        // Close button events - Enhanced for mobile touch support
-        let closeButtonPressed = false;
-        
-        this.infoCloseButton.on('pointerdown', () => {
-            if (!closeButtonPressed) {
-                closeButtonPressed = true;
-                this.time.delayedCall(50, () => {
-                    if (closeButtonPressed && this.infoCloseButton) {
-                        this.hideInfoPanel();
-                    }
-                });
+        // Close button events - Fix interaction flow by binding context
+        const closeButton = this.infoCloseButton;
+        const overlay = this.infoOverlay;
+
+        const handlePointerDown = function() {
+            console.log('Info close button pointerdown triggered');
+            
+            // KIỂM TRA ĐẦU TIÊN: Nếu đã cleanup hoàn toàn, KHÔNG làm gì cả
+            if (this.panelCleanupComplete) {
+                console.log('panelCleanupComplete = true, BỎ QUA HOÀN TOÀN sự kiện pointerdown');
+                return;
             }
-        });
+            
+            console.log('Trạng thái khi pointerdown:');
+            console.log('  - infoPanelExists:', this.infoPanelExists);
+            console.log('  - isClosingInfoPanel:', this.isClosingInfoPanel);
+            console.log('  - panelCleanupComplete:', this.panelCleanupComplete);
+            console.log('  - Elements still exist:');
+            console.log('    - this.infoOverlay:', !!this.infoOverlay);
+            console.log('    - this.infoPanel:', !!this.infoPanel);
+            console.log('    - this.infoCloseButton:', !!this.infoCloseButton);
+            
+            // Các kiểm tra cần thiết
+            if (!this.scene || !this.scene.isActive()) {
+                console.log('Scene không còn hoạt động, bỏ qua sự kiện pointerdown');
+                return;
+            }
+            
+            if (!this.infoPanelExists) {
+                console.log('Panel không còn tồn tại, bỏ qua sự kiện pointerdown');
+                console.log('Nhưng các elements vẫn còn! Gọi forceCleanupInfoPanel()');
+                this.forceCleanupInfoPanel();
+                return;
+            }
+            
+            if (this.isClosingInfoPanel === 'in_progress') {
+                console.log('Panel đang đóng, bỏ qua sự kiện pointerdown');
+                return;
+            }
+            
+            console.log('Đặt buttonPressed = true');
+            this.buttonPressed = true;
+        };
+
+        const handlePointerUp = function(button, ov) {
+            console.log('Info close button pointerup triggered');
+            
+            // KIỂM TRA ĐẦU TIÊN: Nếu đã cleanup hoàn toàn, KHÔNG làm gì cả
+            if (this.panelCleanupComplete) {
+                console.log('panelCleanupComplete = true, BỎ QUA HOÀN TOÀN sự kiện pointerup');
+                return;
+            }
+            
+            console.log('Trạng thái khi pointerup:');
+            console.log('  - infoPanelExists:', this.infoPanelExists);
+            console.log('  - isClosingInfoPanel:', this.isClosingInfoPanel);
+            console.log('  - buttonPressed:', this.buttonPressed);
+            console.log('  - button.isCleanedUp:', button ? button.isCleanedUp : 'button is null');
+            
+            // Đảm bảo scene vẫn còn hoạt động
+            if (!this.scene || !this.scene.isActive()) {
+                console.log('Scene không còn hoạt động, bỏ qua sự kiện');
+                return;
+            }
+            
+            // Kiểm tra nút đã bị dọn dẹp chưa
+            if (button && button.isCleanedUp) {
+                console.log('Button đã bị dọn dẹp, bỏ qua sự kiện');
+                return;
+            }
+            
+            // Kiểm tra panel còn tồn tại không hoặc đang đóng
+            if (!this.infoPanelExists) {
+                console.log('Panel không còn tồn tại, bỏ qua sự kiện');
+                console.log('Elements vẫn còn:');
+                console.log('  - this.infoOverlay:', !!this.infoOverlay);
+                console.log('  - this.infoPanel:', !!this.infoPanel);
+                console.log('  - this.infoCloseButton:', !!this.infoCloseButton);
+                console.log('Gọi forceCleanupInfoPanel()');
+                this.forceCleanupInfoPanel();
+                return;
+            }
+            
+            // Kiểm tra panel có đang đóng không
+            if (this.isClosingInfoPanel === 'in_progress') {
+                console.log('Panel đang đóng, bỏ qua sự kiện');
+                return;
+            }
+            
+            console.log('Info close button pointerup triggered');
+            console.log('Button was pressed:', this.buttonPressed);
+            console.log('Panel closing in progress:', this.isClosingInfoPanel);
+            console.log('Panel exists:', this.infoPanelExists);
+
+            if (this.buttonPressed && ov && !this.isClosingInfoPanel && this.infoPanelExists) {
+                console.log('Calling hideInfoPanel()');
+                this.hideInfoPanel();
+                this.buttonPressed = false;
+            } else {
+                console.log('Cannot close - conditions not met');
+            }
+        };
+
+        // Lưu trữ các handler để dễ dàng xóa sau này
+        this.closeButtonHandlers = {
+            pointerdown: handlePointerDown,
+            pointerup: handlePointerUp.bind(this, closeButton, overlay)
+        };
         
-        this.infoCloseButton.on('pointerup', () => {
-            if (!closeButtonPressed) {
-                closeButtonPressed = true;
+        closeButton.on('pointerdown', this.closeButtonHandlers.pointerdown, this);
+        closeButton.on('pointerup', this.closeButtonHandlers.pointerup);
+        
+        // Lưu handler cho mobile tap event
+        this.closeButtonHandlers.tap = () => {
+            // KIỂM TRA ĐẦU TIÊN: Nếu đã cleanup hoàn toàn, KHÔNG làm gì cả
+            if (this.panelCleanupComplete) {
+                console.log('panelCleanupComplete = true, BỎ QUA HOÀN TOÀN sự kiện tap');
+                return;
+            }
+            
+            // Kiểm tra scene và button tồn tại
+            if (!this.scene || !this.scene.isActive()) {
+                console.log('Scene không còn hoạt động, bỏ qua sự kiện tap');
+                return;
+            }
+            
+            // Kiểm tra button đã bị dọn dẹp chưa
+            if (this.infoCloseButton && this.infoCloseButton.isCleanedUp) {
+                console.log('Button đã bị dọn dẹp, bỏ qua sự kiện tap');
+                return;
+            }
+            
+            // Kiểm tra panel còn tồn tại không
+            if (!this.infoPanelExists) {
+                console.log('Panel không còn tồn tại, bỏ qua sự kiện tap');
+                return;
+            }
+            
+            // Kiểm tra panel có đang đóng không
+            if (this.isClosingInfoPanel === 'in_progress') {
+                console.log('Panel đang đóng, bỏ qua sự kiện tap');
+                return;
+            }
+            
+            console.log('Info close button pointertap triggered (mobile fallback)');
+            if (this.infoOverlay && this.isClosingInfoPanel !== 'in_progress' && this.infoPanelExists) {
+                console.log('Calling hideInfoPanel() from tap');
                 this.hideInfoPanel();
             }
-        });
+        };
         
-        // Additional mobile-specific touch event
-        this.infoCloseButton.on('pointertap', () => {
-            if (!closeButtonPressed) {
-                closeButtonPressed = true;
-                this.hideInfoPanel();
-            }
-        });
+        // Đăng ký mobile tap event
+        this.infoCloseButton.on('pointertap', this.closeButtonHandlers.tap);
         
-        // Close button hover effects with mobile feedback
-        this.infoCloseButton.on('pointerover', () => {
-            if (this.infoCloseButton && this.infoCloseButton.active) {
+        // Lưu handlers cho hover effects
+        this.closeButtonHandlers.over = () => {
+            if (this.panelCleanupComplete) return; // Bỏ qua nếu đã cleanup hoàn toàn
+            if (!this.infoPanelExists || this.isClosingInfoPanel === 'in_progress') return;
+            if (this.infoCloseButton && this.infoCloseButton.active && !this.infoCloseButton.isCleanedUp) {
                 this.infoCloseButton.setFillStyle(0xec7063);
                 this.infoCloseButton.setScale(1.1);
             }
-        });
+        };
         
-        this.infoCloseButton.on('pointerout', () => {
-            if (this.infoCloseButton && this.infoCloseButton.active) {
+        this.closeButtonHandlers.out = () => {
+            if (this.panelCleanupComplete) return; // Bỏ qua nếu đã cleanup hoàn toàn
+            if (!this.infoPanelExists || this.isClosingInfoPanel === 'in_progress') return;
+            if (this.infoCloseButton && this.infoCloseButton.active && !this.infoCloseButton.isCleanedUp) {
                 this.infoCloseButton.setFillStyle(0xe74c3c);
                 this.infoCloseButton.setScale(1.0);
             }
-        });
+        };
         
-        // Visual feedback for mobile tap
-        this.infoCloseButton.on('pointerdown', () => {
-            if (this.infoCloseButton && this.infoCloseButton.active) {
+        // Đăng ký hover effects
+        this.infoCloseButton.on('pointerover', this.closeButtonHandlers.over);
+        this.infoCloseButton.on('pointerout', this.closeButtonHandlers.out);
+        
+        // Visual feedback for mobile tap - kết hợp với các handlers chính
+        this.closeButtonHandlers.visualDown = () => {
+            if (this.panelCleanupComplete) return; // Bỏ qua nếu đã cleanup hoàn toàn
+            if (!this.infoPanelExists || this.isClosingInfoPanel === 'in_progress') return;
+            if (this.infoCloseButton && this.infoCloseButton.active && !this.infoCloseButton.isCleanedUp) {
                 this.infoCloseButton.setFillStyle(0xd63031);
                 this.infoCloseButton.setScale(0.95);
             }
-        });
+        };
         
-        this.infoCloseButton.on('pointerup', () => {
-            if (this.infoCloseButton && this.infoCloseButton.active) {
+        this.closeButtonHandlers.visualUp = () => {
+            if (this.panelCleanupComplete) return; // Bỏ qua nếu đã cleanup hoàn toàn
+            if (!this.infoPanelExists || this.isClosingInfoPanel === 'in_progress') return;
+            if (this.infoCloseButton && this.infoCloseButton.active && !this.infoCloseButton.isCleanedUp) {
                 this.infoCloseButton.setFillStyle(0xe74c3c);
                 this.infoCloseButton.setScale(1.0);
             }
-        });
+        };
+        
+        // Bổ sung visual handlers vào các sự kiện đã tồn tại
+        closeButton.on('pointerdown', this.closeButtonHandlers.visualDown);
+        closeButton.on('pointerup', this.closeButtonHandlers.visualUp);
         
         // Animation: Fade in and scale up
         [this.infoOverlay, this.infoPanel, this.infoPanelTitle, this.infoPanelContent, this.infoCloseButton, this.infoCloseButtonText].forEach(element => {
@@ -1346,14 +1603,68 @@ export default class SlotMachineScene extends Phaser.Scene {
     }
     
     hideInfoPanel() {
-        // Immediately remove all event listeners to prevent stuck state
-        this.cleanupInfoPanelEvents();
+        // Kiểm tra tình trạng scene
+        if (!this.scene || !this.scene.isActive()) {
+            console.log('Scene không hoạt động, bỏ qua hideInfoPanel');
+            return;
+        }
+        
+        // Kiểm tra nếu panel không tồn tại
+        if (!this.infoPanelExists) {
+            console.log('Panel đã không tồn tại, bỏ qua việc đóng');
+            return;
+        }
+        
+        // Throttling - chỉ cho phép đóng mở cách nhau ít nhất 500ms
+        const currentTime = this.time.now;
+        if (currentTime - this.lastPanelActionTime < 500) {
+            console.log('Thao tác đóng quá nhanh, vui lòng chờ 500ms');
+            return;
+        }
+        this.lastPanelActionTime = currentTime;
+        
+        console.log('hideInfoPanel() called');
+        console.log('Trạng thái hiện tại:');
+        console.log('  - infoPanelExists:', this.infoPanelExists);
+        console.log('  - isClosingInfoPanel:', this.isClosingInfoPanel);
+        console.log('  - panelCleanupComplete:', this.panelCleanupComplete);
+        console.log('Elements exist - Overlay:', !!this.infoOverlay, 'Panel:', !!this.infoPanel, 'Button:', !!this.infoCloseButton);
+        
+        // Prevent multiple calls
+        if (this.isClosingInfoPanel === 'in_progress') {
+            console.log('Panel đang đóng, bỏ qua lệnh gọi');
+            return;
+        }
+        
+        // Đánh dấu panel đang trong quá trình đóng
+        this.isClosingInfoPanel = 'in_progress';
+        console.log('Đã đặt isClosingInfoPanel = in_progress');
+        console.log('infoPanelExists vẫn là:', this.infoPanelExists);
+        
+        // Đánh dấu nút đóng đã được dọn dẹp
+        if (this.infoCloseButton) {
+            this.infoCloseButton.isCleanedUp = true;
+            console.log('Đã đặt infoCloseButton.isCleanedUp = true');
+        }
+        
+        // Reset button pressed state để tránh xung đột
+        this.buttonPressed = false;
+        
+        console.log('Bắt đầu đóng panel với animation - KHÔNG xóa event listeners ngay lập tức');
+        
+        // KHÔNG xóa event listeners ngay - để animation hoạt động
+        // Event listeners sẽ được xóa trong finalizeInfoPanelCleanup()
+        
+        console.log('Đặt cờ đóng panel thành in_progress và xóa các event listener');
         
         // Animation: Fade out and scale down
+        console.log('Bắt đầu animation đóng panel');
+        
         const elements = [this.infoOverlay, this.infoPanel, this.infoPanelTitle, this.infoPanelContent, this.infoCloseButton, this.infoCloseButtonText, this.contentMask];
         
         let completedAnimations = 0;
         const totalAnimations = elements.filter(element => element).length;
+        console.log('Bắt đầu animations cho', totalAnimations, 'elements');
         
         elements.forEach(element => {
             if (element) {
@@ -1364,101 +1675,181 @@ export default class SlotMachineScene extends Phaser.Scene {
                     duration: 200,
                     ease: 'Power2.easeIn',
                     onComplete: () => {
-                        element.destroy();
+                        console.log('Animation completed for element');
+                        
+                        // Check if scene still exists before proceeding
+                        if (!this.scene || !this.scene.isActive()) {
+                            console.log('Scene no longer active, skipping cleanup');
+                            return;
+                        }
+                        
+                        try {
+                            if (element && element.scene && element.active !== false) {
+                                element.destroy();
+                            }
+                        } catch (error) {
+                            console.warn('Error destroying element:', error);
+                        }
+                        
                         completedAnimations++;
+                        console.log('Completed animations:', completedAnimations, '/', totalAnimations);
                         
                         // Ensure cleanup after all animations complete
                         if (completedAnimations === totalAnimations) {
-                            this.finalizeInfoPanelCleanup();
+                            console.log('All animations completed, calling finalizeInfoPanelCleanup');
+                            // Cancel the fallback timer as animations completed successfully
+                            if (this.cleanupTimer) {
+                                this.cleanupTimer.remove();
+                                this.cleanupTimer = null;
+                            }
+                            try {
+                                // Đặt lại lastPanelActionTime để cho phép mở panel mới
+                                this.lastPanelActionTime = this.time.now;
+                                this.finalizeInfoPanelCleanup();
+                            } catch (error) {
+                                console.warn('Error in final cleanup:', error);
+                                // Force cleanup even if there's an error
+                                this.forceCleanupInfoPanel();
+                            }
                         }
                     }
                 });
             }
         });
         
+        // Cancel any existing timer before setting a new one
+        if (this.cleanupTimer) {
+            this.cleanupTimer.remove();
+        }
+        
         // Fallback cleanup in case animations don't complete
-        this.time.delayedCall(300, () => {
-            this.finalizeInfoPanelCleanup();
+        this.cleanupTimer = this.time.delayedCall(300, () => {
+            console.log('Fallback cleanup triggered after 300ms');
+            this.cleanupTimer = null; // Clear self reference
+            
+            // Check if scene still exists
+            if (!this.scene || !this.scene.isActive()) {
+                console.log('Scene no longer active, skipping fallback cleanup');
+                return;
+            }
+            
+            try {
+                this.finalizeInfoPanelCleanup();
+            } catch (error) {
+                console.warn('Error in fallback cleanup:', error);
+                // Force cleanup even if there's an error
+                this.forceCleanupInfoPanel();
+            }
         });
     }
     
-    cleanupInfoPanelEvents() {
-        // Remove all input event listeners related to info panel
-        if (this.input && this.infoScrollHandlers) {
-            if (this.infoScrollHandlers.wheel) {
-                this.input.off('wheel', this.infoScrollHandlers.wheel);
-            }
-            if (this.infoScrollHandlers.pointermove) {
-                this.input.off('pointermove', this.infoScrollHandlers.pointermove);
-            }
-            if (this.infoScrollHandlers.pointerup) {
-                this.input.off('pointerup', this.infoScrollHandlers.pointerup);
-            }
-            
-            if (this.input.keyboard) {
-                if (this.infoScrollHandlers.keydownUp) {
-                    this.input.keyboard.off('keydown-UP', this.infoScrollHandlers.keydownUp);
-                }
-                if (this.infoScrollHandlers.keydownDown) {
-                    this.input.keyboard.off('keydown-DOWN', this.infoScrollHandlers.keydownDown);
-                }
-            }
-        }
-        
-        // Clear handlers reference
-        this.infoScrollHandlers = null;
-        
-        // Remove overlay events if exists
-        if (this.infoOverlay) {
-            this.infoOverlay.removeAllListeners();
-            this.infoOverlay.disableInteractive();
-        }
-        
-        // Remove close button events if exists
-        if (this.infoCloseButton && this.infoCloseButton.active) {
-            this.infoCloseButton.removeAllListeners();
-            this.infoCloseButton.disableInteractive();
-            // Immediately null the reference to prevent race conditions
-            const button = this.infoCloseButton;
-            this.infoCloseButton = null;
-            // Then destroy after nulling
-            if (button.scene) {
-                button.destroy();
-            }
-        }
-    }
-    
     finalizeInfoPanelCleanup() {
-        // Safely clear references without destroying (already done in animation)
-        if (this.infoOverlay && this.infoOverlay.scene) {
-            this.infoOverlay = null;
+        console.log('finalizeInfoPanelCleanup() called');
+        
+        // Check if scene still active
+        if (!this.scene || !this.scene.isActive()) {
+            console.log('Scene no longer active, skipping finalize cleanup');
+            return;
         }
-        if (this.infoPanel && this.infoPanel.scene) {
-            this.infoPanel = null;
+
+        // 1. Remove all input event listeners related to info panel
+        if (this.input && this.infoScrollHandlers) {
+            console.log('Cleaning up scroll handlers');
+            try {
+                if (this.infoScrollHandlers.wheel) {
+                    this.input.off('wheel', this.infoScrollHandlers.wheel);
+                }
+                if (this.infoScrollHandlers.pointermove) {
+                    this.input.off('pointermove', this.infoScrollHandlers.pointermove);
+                }
+                if (this.infoScrollHandlers.pointerup) {
+                    this.input.off('pointerup', this.infoScrollHandlers.pointerup);
+                }
+                
+                if (this.input.keyboard) {
+                    if (this.infoScrollHandlers.keydownUp) {
+                        this.input.keyboard.off('keydown-UP', this.infoScrollHandlers.keydownUp);
+                    }
+                    if (this.infoScrollHandlers.keydownDown) {
+                        this.input.keyboard.off('keydown-DOWN', this.infoScrollHandlers.keydownDown);
+                    }
+                }
+            } catch (error) {
+                console.warn('Error cleaning up scroll handlers:', error);
+            }
         }
-        if (this.infoPanelTitle && this.infoPanelTitle.scene) {
-            this.infoPanelTitle = null;
+
+        // 1.5. Remove close button event listeners
+        if (this.infoCloseButton) {
+            try {
+                this.infoCloseButton.removeAllListeners();
+                console.log('Đã xóa tất cả event listeners của nút đóng');
+            } catch (error) {
+                console.warn('Error cleaning up close button listeners:', error);
+            }
         }
-        if (this.infoPanelContent && this.infoPanelContent.scene) {
-            this.infoPanelContent = null;
-        }
-        if (this.infoCloseButton && this.infoCloseButton.scene) {
-            this.infoCloseButton = null;
-        }
-        if (this.infoCloseButtonText && this.infoCloseButtonText.scene) {
-            this.infoCloseButtonText = null;
-        }
-        if (this.contentMask && this.contentMask.scene) {
-            this.contentMask = null;
+
+        // 1.6. Remove overlay event listeners  
+        if (this.infoOverlay) {
+            try {
+                this.infoOverlay.removeAllListeners();
+                console.log('Đã xóa tất cả event listeners của overlay');
+            } catch (error) {
+                console.warn('Error cleaning up overlay listeners:', error);
+            }
         }
         
-        this.scrollOffset = 0;
+        // 1.7. Clear stored handlers
+        this.closeButtonHandlers = null;
+
+        // 2. Destroy all game objects
+        const elementsToDestroy = [
+            this.infoOverlay, this.infoPanel, this.infoPanelTitle, 
+            this.infoPanelContent, this.infoCloseButton, this.infoCloseButtonText, 
+            this.contentMask
+        ];
+
+        elementsToDestroy.forEach(element => {
+            if (element && element.scene) {
+                try {
+                    element.destroy();
+                } catch (e) {
+                    console.warn('Error destroying element during final cleanup', e);
+                }
+            }
+        });
+
+        // 3. Nullify all references
+        this.infoOverlay = null;
+        this.infoPanel = null;
+        this.infoPanelTitle = null;
+        this.infoPanelContent = null;
+        this.infoCloseButton = null;
+        this.infoCloseButtonText = null;
+        this.contentMask = null;
         this.infoScrollHandlers = null;
         
-        // Re-enable main game input
+        // 4. Reset flags and state
+        console.log('finalizeInfoPanelCleanup: Bắt đầu reset flags');
+        this.scrollOffset = 0;
+        this.isClosingInfoPanel = false; // Reset closing flag
+        console.log('finalizeInfoPanelCleanup: Đặt isClosingInfoPanel = false');
+        this.infoPanelExists = false; // Chỉ đặt false khi thật sự hoàn tất cleanup
+        console.log('finalizeInfoPanelCleanup: Đặt infoPanelExists = false');
+        this.panelCleanupComplete = true; // Chỉ đặt cờ này khi cleanup thật sự hoàn tất
+        console.log('finalizeInfoPanelCleanup: Đặt panelCleanupComplete = true');
+        this.lastPanelActionTime = this.time.now; // Reset để cho phép mở panel mới
+        console.log('finalizeInfoPanelCleanup: Reset lastPanelActionTime to', this.lastPanelActionTime);
+        
+        console.log('All references cleared and objects destroyed');
+        
+        // 5. Re-enable main game input
         if (this.input) {
             this.input.enabled = true;
+            console.log('Main game input re-enabled');
         }
+        
+        console.log('Info panel cleanup completed successfully');
     }
 
     // Helper method to play sounds with fallbacks
@@ -1515,5 +1906,121 @@ export default class SlotMachineScene extends Phaser.Scene {
         if (this.infoOverlay) {
             this.hideInfoPanel();
         }
+    }
+    
+    shutdown() {
+        console.log('SlotMachineScene shutdown called');
+        
+        // Stop all tweens to prevent callbacks after scene destroy
+        if (this.tweens) {
+            this.tweens.killAll();
+        }
+        
+        // Clear all timers
+        if (this.time) {
+            this.time.removeAllEvents();
+        }
+        
+        // Force cleanup info panel
+        this.forceCleanupInfoPanel();
+        
+        // Clear all custom references
+        this.player = null;
+        this.currentLevel = null;
+        this.spinsRemaining = null;
+        this.lightEffects = [];
+        this.spinGlowEffect = null;
+        this.isClosingInfoPanel = false;
+        
+        console.log('SlotMachineScene shutdown completed');
+    }
+    
+    forceCleanupInfoPanel() {
+        console.log('Force cleanup info panel - BẮT ĐẦU');
+        
+        // Reset trạng thái ngay lập tức
+        this.isClosingInfoPanel = false;
+        console.log('forceCleanup: Đặt isClosingInfoPanel = false');
+        this.infoPanelExists = false;
+        console.log('forceCleanup: Đặt infoPanelExists = false');
+        this.buttonPressed = false;
+        this.panelCleanupComplete = true;
+        this.lastPanelActionTime = this.time.now; // Reset timer khi force cleanup
+        
+        console.log('forceCleanup: Reset lastPanelActionTime to', this.lastPanelActionTime);
+        
+        // Dừng tất cả tweens liên quan đến info panel
+        if (this.tweens) {
+            this.tweens.killAll();
+            console.log('forceCleanup: Đã dừng tất cả tweens');
+        }
+        
+        // Xóa cleanup timer nếu có
+        if (this.cleanupTimer) {
+            this.cleanupTimer.remove();
+            this.cleanupTimer = null;
+            console.log('forceCleanup: Đã xóa cleanup timer');
+        }
+        
+        // Immediately destroy all info panel elements without animation
+        const elements = [
+            'infoOverlay', 'infoPanel', 'infoPanelTitle', 
+            'infoPanelContent', 'infoCloseButton', 'infoCloseButtonText', 'contentMask'
+        ];
+        
+        let destroyedCount = 0;
+        elements.forEach(elemName => {
+            if (this[elemName]) {
+                console.log(`forceCleanup: Destroying ${elemName}`);
+                try {
+                    // Xóa tất cả listeners trước khi destroy
+                    if (this[elemName].removeAllListeners) {
+                        this[elemName].removeAllListeners();
+                        console.log(`forceCleanup: Đã xóa listeners của ${elemName}`);
+                    }
+                    
+                    // Sau đó destroy đối tượng
+                    if (this[elemName].destroy) {
+                        this[elemName].destroy();
+                        console.log(`forceCleanup: Đã destroy ${elemName}`);
+                        destroyedCount++;
+                    }
+                } catch (error) {
+                    console.warn(`Error destroying ${elemName}:`, error);
+                }
+                
+                // Đặt null cho tham chiếu
+                this[elemName] = null;
+            }
+        });
+        
+        console.log(`forceCleanup: Đã destroy ${destroyedCount} elements`);
+        
+        // Clear các handlers và trạng thái
+        this.infoScrollHandlers = null;
+        this.closeButtonHandlers = null;
+        
+        // Re-enable main game input
+        if (this.input) {
+            this.input.enabled = true;
+            console.log('forceCleanup: Đã re-enable main game input');
+        }
+        
+        console.log('Force cleanup completed - all elements destroyed and references cleared');
+    }
+    
+    // Helper method để debug panel state
+    debugPanelState() {
+        console.log('=== PANEL STATE DEBUG ===');
+        console.log('infoPanelExists:', this.infoPanelExists);
+        console.log('isClosingInfoPanel:', this.isClosingInfoPanel);
+        console.log('panelCleanupComplete:', this.panelCleanupComplete);
+        console.log('Elements exist:');
+        console.log('  - infoOverlay:', !!this.infoOverlay);
+        console.log('  - infoPanel:', !!this.infoPanel);
+        console.log('  - infoCloseButton:', !!this.infoCloseButton);
+        console.log('  - infoPanelTitle:', !!this.infoPanelTitle);
+        console.log('  - infoPanelContent:', !!this.infoPanelContent);
+        console.log('========================');
     }
 }

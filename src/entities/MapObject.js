@@ -98,15 +98,27 @@ export class RandomEffectMapObject extends MapObject {
             const imgW = source.width;
             const imgH = source.height;
             
-            // Fit entire image within screen (with letterbox if needed)
-            const scaleX = width / imgW;
-            const scaleY = height / imgH;
+            // Calculate aspect ratios
+            const screenAspect = width / height;
+            const imageAspect = imgW / imgH;
             
-            // Use contain scaling (shows entire image, may have black bars)
-            const scale = Math.min(scaleX, scaleY);
+            // Smart scaling like mobile photo viewers
+            let scale;
+            if (Math.abs(screenAspect - imageAspect) < 0.1) {
+                // Aspect ratios are similar - fill screen
+                scale = Math.max(width / imgW, height / imgH);
+            } else if (imageAspect > screenAspect) {
+                // Image is wider - fit width, may have top/bottom bars
+                scale = width / imgW;
+            } else {
+                // Image is taller - fit height, may have left/right bars  
+                scale = height / imgH;
+            }
+            
+            // Apply scaling
             img.setScale(scale);
             
-            // Center the image properly
+            // Perfect centering
             img.setPosition(width / 2, height / 2);
 
             // Pause timer
