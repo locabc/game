@@ -98,21 +98,16 @@ export class RandomEffectMapObject extends MapObject {
             const imgW = source.width;
             const imgH = source.height;
             
-            // Mobile-optimized scaling - cover full screen properly
+            // Fit entire image within screen (with letterbox if needed)
             const scaleX = width / imgW;
             const scaleY = height / imgH;
             
-            // Use cover scaling (fills entire screen, may crop some parts)
-            const scale = Math.max(scaleX, scaleY);
+            // Use contain scaling (shows entire image, may have black bars)
+            const scale = Math.min(scaleX, scaleY);
             img.setScale(scale);
             
-            // Ensure image covers the entire screen on mobile
-            if (scale * imgW < width || scale * imgH < height) {
-                const coverScaleX = width / imgW;
-                const coverScaleY = height / imgH;
-                const coverScale = Math.max(coverScaleX, coverScaleY);
-                img.setScale(coverScale);
-            }
+            // Center the image properly
+            img.setPosition(width / 2, height / 2);
 
             // Pause timer
             if (scene.timerEvent) scene.timerEvent.paused = true;

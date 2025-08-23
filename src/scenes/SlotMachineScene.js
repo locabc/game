@@ -1078,6 +1078,29 @@ export default class SlotMachineScene extends Phaser.Scene {
         this.infoOverlay = this.add.rectangle(0, 0, C.VIRTUAL_WIDTH, C.VIRTUAL_HEIGHT, 0x000000, 0.8).setOrigin(0);
         this.infoOverlay.setInteractive(); // Block clicks to background
         
+        // Allow closing panel by tapping overlay on mobile
+        const isMobileDevice = this.sys.game.device.input.touch;
+        if (isMobileDevice) {
+            let overlayClosePressed = false;
+            this.infoOverlay.on('pointerdown', (pointer) => {
+                // Only close if clicking outside the panel area
+                const panelBounds = {
+                    left: 10,
+                    right: C.VIRTUAL_WIDTH - 10,
+                    top: 15,
+                    bottom: C.VIRTUAL_HEIGHT - 15
+                };
+                
+                if (pointer.x < panelBounds.left || pointer.x > panelBounds.right ||
+                    pointer.y < panelBounds.top || pointer.y > panelBounds.bottom) {
+                    if (!overlayClosePressed) {
+                        overlayClosePressed = true;
+                        this.hideInfoPanel();
+                    }
+                }
+            });
+        }
+        
         // Info panel background (larger size)
         const panelWidth = C.VIRTUAL_WIDTH - 20; // Almost full width
         const panelHeight = C.VIRTUAL_HEIGHT - 30; // Almost full height
@@ -1153,12 +1176,21 @@ export default class SlotMachineScene extends Phaser.Scene {
         // Apply mask to content
         this.infoPanelContent.setMask(this.contentMask.createGeometryMask());
 
-        // Close button (X) - larger and in top right
-        this.infoCloseButton = this.add.rectangle(C.VIRTUAL_WIDTH - 22, 27, 20, 20, 0xe74c3c);
-        this.infoCloseButton.setInteractive({ useHandCursor: true });
+        // Close button (X) - optimized for mobile touch
+        const isMobile = this.sys.game.device.input.touch;
+        const buttonSize = isMobile ? 30 : 20; // Larger on mobile
+        const fontSize = isMobile ? '18px' : '15px';
+        
+        this.infoCloseButton = this.add.rectangle(C.VIRTUAL_WIDTH - 22, 27, buttonSize, buttonSize, 0xe74c3c);
+        this.infoCloseButton.setInteractive({ 
+            useHandCursor: true,
+            hitArea: new Phaser.Geom.Rectangle(-5, -5, buttonSize + 10, buttonSize + 10), // Larger hit area for mobile
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains
+        });
+        
         this.infoCloseButtonText = this.add.text(C.VIRTUAL_WIDTH - 22, 27, '✕', {
             fontFamily: 'Arial',
-            fontSize: '15px',
+            fontSize: fontSize,
             fill: '#ffffff',
             fontWeight: 'bold'
         }).setOrigin(0.5);
@@ -1166,11 +1198,36 @@ export default class SlotMachineScene extends Phaser.Scene {
         // Setup scrolling interaction
         this.setupScrolling(contentAreaHeight);
         
-        // Close button events - Use once() to prevent multiple calls
-        this.infoCloseButton.once('pointerdown', () => this.hideInfoPanel());
-        this.infoCloseButton.once('pointerup', () => this.hideInfoPanel());
+        // Close button events - Enhanced for mobile touch support
+        let closeButtonPressed = false;
         
-        // Close button hover effects
+        this.infoCloseButton.on('pointerdown', () => {
+            if (!closeButtonPressed) {
+                closeButtonPressed = true;
+                this.time.delayedCall(50, () => {
+                    if (closeButtonPressed && this.infoCloseButton) {
+                        this.hideInfoPanel();
+                    }
+                });
+            }
+        });
+        
+        this.infoCloseButton.on('pointerup', () => {
+            if (!closeButtonPressed) {
+                closeButtonPressed = true;
+                this.hideInfoPanel();
+            }
+        });
+        
+        // Additional mobile-specific touch event
+        this.infoCloseButton.on('pointertap', () => {
+            if (!closeButtonPressed) {
+                closeButtonPressed = true;
+                this.hideInfoPanel();
+            }
+        });
+        
+        // Close button hover effects with mobile feedback
         this.infoCloseButton.on('pointerover', () => {
             if (this.infoCloseButton && this.infoCloseButton.active) {
                 this.infoCloseButton.setFillStyle(0xec7063);
@@ -1179,6 +1236,21 @@ export default class SlotMachineScene extends Phaser.Scene {
         });
         
         this.infoCloseButton.on('pointerout', () => {
+            if (this.infoCloseButton && this.infoCloseButton.active) {
+                this.infoCloseButton.setFillStyle(0xe74c3c);
+                this.infoCloseButton.setScale(1.0);
+            }
+        });
+        
+        // Visual feedback for mobile tap
+        this.infoCloseButton.on('pointerdown', () => {
+            if (this.infoCloseButton && this.infoCloseButton.active) {
+                this.infoCloseButton.setFillStyle(0xd63031);
+                this.infoCloseButton.setScale(0.95);
+            }
+        });
+        
+        this.infoCloseButton.on('pointerup', () => {
             if (this.infoCloseButton && this.infoCloseButton.active) {
                 this.infoCloseButton.setFillStyle(0xe74c3c);
                 this.infoCloseButton.setScale(1.0);
