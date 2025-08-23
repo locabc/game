@@ -1166,9 +1166,9 @@ export default class SlotMachineScene extends Phaser.Scene {
         // Setup scrolling interaction
         this.setupScrolling(contentAreaHeight);
         
-        // Close button events
-        this.infoCloseButton.on('pointerdown', () => this.hideInfoPanel());
-        this.infoCloseButton.on('pointerup', () => this.hideInfoPanel());
+        // Close button events - Use once() to prevent multiple calls
+        this.infoCloseButton.once('pointerdown', () => this.hideInfoPanel());
+        this.infoCloseButton.once('pointerup', () => this.hideInfoPanel());
         
         // Close button hover effects
         this.infoCloseButton.on('pointerover', () => {
@@ -1199,49 +1199,65 @@ export default class SlotMachineScene extends Phaser.Scene {
     setupScrolling(contentAreaHeight) {
         const maxScroll = Math.max(0, this.infoPanelContent.height - contentAreaHeight + 40);
         
+        // Store references to event handlers for cleanup
+        this.infoScrollHandlers = {
+            wheel: null,
+            pointerdown: null,
+            pointermove: null,
+            pointerup: null,
+            keydownUp: null,
+            keydownDown: null
+        };
+        
         // Mouse wheel scrolling
-        this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+        this.infoScrollHandlers.wheel = (pointer, gameObjects, deltaX, deltaY) => {
             if (this.infoOverlay && this.infoOverlay.visible) {
                 this.scrollContent(deltaY > 0 ? 20 : -20, maxScroll);
             }
-        });
+        };
+        this.input.on('wheel', this.infoScrollHandlers.wheel);
         
         // Touch/drag scrolling
         let isDragging = false;
         let lastPointerY = 0;
         
-        this.infoOverlay.on('pointerdown', (pointer) => {
+        this.infoScrollHandlers.pointerdown = (pointer) => {
             if (pointer.x > 10 && pointer.x < C.VIRTUAL_WIDTH - 10 && 
                 pointer.y > 55 && pointer.y < C.VIRTUAL_HEIGHT - 35) {
                 isDragging = true;
                 lastPointerY = pointer.y;
             }
-        });
+        };
+        this.infoOverlay.on('pointerdown', this.infoScrollHandlers.pointerdown);
         
-        this.input.on('pointermove', (pointer) => {
+        this.infoScrollHandlers.pointermove = (pointer) => {
             if (isDragging && this.infoOverlay && this.infoOverlay.visible) {
                 const deltaY = lastPointerY - pointer.y;
                 this.scrollContent(deltaY, maxScroll);
                 lastPointerY = pointer.y;
             }
-        });
+        };
+        this.input.on('pointermove', this.infoScrollHandlers.pointermove);
         
-        this.input.on('pointerup', () => {
+        this.infoScrollHandlers.pointerup = () => {
             isDragging = false;
-        });
+        };
+        this.input.on('pointerup', this.infoScrollHandlers.pointerup);
         
         // Keyboard scrolling
-        this.input.keyboard.on('keydown-UP', () => {
+        this.infoScrollHandlers.keydownUp = () => {
             if (this.infoOverlay && this.infoOverlay.visible) {
                 this.scrollContent(-30, maxScroll);
             }
-        });
+        };
+        this.input.keyboard.on('keydown-UP', this.infoScrollHandlers.keydownUp);
         
-        this.input.keyboard.on('keydown-DOWN', () => {
+        this.infoScrollHandlers.keydownDown = () => {
             if (this.infoOverlay && this.infoOverlay.visible) {
                 this.scrollContent(30, maxScroll);
             }
-        });
+        };
+        this.input.keyboard.on('keydown-DOWN', this.infoScrollHandlers.keydownDown);
     }
     
     scrollContent(deltaY, maxScroll) {
@@ -1254,8 +1270,14 @@ export default class SlotMachineScene extends Phaser.Scene {
     }
     
     hideInfoPanel() {
+        // Immediately remove all event listeners to prevent stuck state
+        this.cleanupInfoPanelEvents();
+        
         // Animation: Fade out and scale down
         const elements = [this.infoOverlay, this.infoPanel, this.infoPanelTitle, this.infoPanelContent, this.infoCloseButton, this.infoCloseButtonText, this.contentMask];
+        
+        let completedAnimations = 0;
+        const totalAnimations = elements.filter(element => element).length;
         
         elements.forEach(element => {
             if (element) {
@@ -1267,11 +1289,63 @@ export default class SlotMachineScene extends Phaser.Scene {
                     ease: 'Power2.easeIn',
                     onComplete: () => {
                         element.destroy();
+                        completedAnimations++;
+                        
+                        // Ensure cleanup after all animations complete
+                        if (completedAnimations === totalAnimations) {
+                            this.finalizeInfoPanelCleanup();
+                        }
                     }
                 });
             }
         });
         
+        // Fallback cleanup in case animations don't complete
+        this.time.delayedCall(300, () => {
+            this.finalizeInfoPanelCleanup();
+        });
+    }
+    
+    cleanupInfoPanelEvents() {
+        // Remove all input event listeners related to info panel
+        if (this.input && this.infoScrollHandlers) {
+            if (this.infoScrollHandlers.wheel) {
+                this.input.off('wheel', this.infoScrollHandlers.wheel);
+            }
+            if (this.infoScrollHandlers.pointermove) {
+                this.input.off('pointermove', this.infoScrollHandlers.pointermove);
+            }
+            if (this.infoScrollHandlers.pointerup) {
+                this.input.off('pointerup', this.infoScrollHandlers.pointerup);
+            }
+            
+            if (this.input.keyboard) {
+                if (this.infoScrollHandlers.keydownUp) {
+                    this.input.keyboard.off('keydown-UP', this.infoScrollHandlers.keydownUp);
+                }
+                if (this.infoScrollHandlers.keydownDown) {
+                    this.input.keyboard.off('keydown-DOWN', this.infoScrollHandlers.keydownDown);
+                }
+            }
+        }
+        
+        // Clear handlers reference
+        this.infoScrollHandlers = null;
+        
+        // Remove overlay events if exists
+        if (this.infoOverlay) {
+            this.infoOverlay.removeAllListeners();
+            this.infoOverlay.disableInteractive();
+        }
+        
+        // Remove close button events if exists
+        if (this.infoCloseButton) {
+            this.infoCloseButton.removeAllListeners();
+            this.infoCloseButton.disableInteractive();
+        }
+    }
+    
+    finalizeInfoPanelCleanup() {
         // Clear references
         this.infoOverlay = null;
         this.infoPanel = null;
@@ -1281,6 +1355,12 @@ export default class SlotMachineScene extends Phaser.Scene {
         this.infoCloseButtonText = null;
         this.contentMask = null;
         this.scrollOffset = 0;
+        this.infoScrollHandlers = null;
+        
+        // Re-enable main game input
+        if (this.input) {
+            this.input.enabled = true;
+        }
     }
 
     // Helper method to play sounds with fallbacks
