@@ -41,8 +41,8 @@ export default class Player {
         // cộng thêm bonus theo level (lv2:200, lv3:300, ... lv30:3000) 
         let levelBonus = this.level * 100;    
 
-        // thêm phần tăng đều 20 mỗi level 
-        let extra = this.level * 20;   
+        // thêm phần tăng đều 100 mỗi level 
+        let extra = this.level * 100;   
 
         this.goal += addOn + this.goalAddOn + levelBonus + extra; 
         } 
