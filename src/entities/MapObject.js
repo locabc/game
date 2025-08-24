@@ -49,7 +49,7 @@ export class RandomEffectMapObject extends MapObject {
     // Hàm đặc biệt được gọi khi thu thập xong
     onCollected(scene) {
         const roll = Math.random(); // random 0–1
-        if (roll < 0.85) {
+        if (roll < 0.05) {
             // ✅ Calculate bonus based on level (every 5 levels +200)
             const levelGroup = Math.ceil(scene.player.level / 5); // 1, 2, 3, 4, 5, 6 (for levels 1-5, 6-10, etc.)
             const baseBonus = 300 + (levelGroup - 1) * 200; 
@@ -57,7 +57,7 @@ export class RandomEffectMapObject extends MapObject {
             scene.player.money += moneyBonus;
             scene.moneyText.setText('$' + scene.player.money);
             scene.sound.play('Money');
-        } else if (roll < 0.92) {
+        } else if (roll < 0.1) {
             scene.player.addDynamite(1);
             if (scene.dynamiteText) {
                 scene.dynamiteText.setText('x' + scene.player.dynamiteCount);
@@ -78,72 +78,77 @@ export class RandomEffectMapObject extends MapObject {
             overlay.setDepth(1000); // Đặt ở layer cao
             overlay.setScrollFactor(0); // Fixed to camera
             
-            // Thêm ảnh cover full màn hình
-            const img = scene.add.image(width / 2, height / 2, imgKey).setOrigin(0.5);
-            img.setDepth(1001); // Đặt ảnh cao hơn overlay
-            img.setScrollFactor(0); // Fixed to camera
-            
-            // ✅ Multiple methods để làm ảnh smooth
-            img.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
-            
-            // ✅ Thêm CSS style cho canvas để render smooth
-            if (scene.sys.game.canvas) {
-                scene.sys.game.canvas.style.imageRendering = 'auto';
-                scene.sys.game.canvas.style.imageRendering = '-webkit-optimize-contrast';
-            }
-            
-            // Lấy kích thước gốc
+            // Lấy kích thước gốc của ảnh
             const tex = scene.textures.get(imgKey);
             const source = tex.getSourceImage();
             const imgW = source.width;
             const imgH = source.height;
             
+            // Check if running on mobile device
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
             // Calculate aspect ratios
             const screenAspect = width / height;
             const imageAspect = imgW / imgH;
             
-            // Smart scaling like mobile photo viewers
-            let scale;
-            if (Math.abs(screenAspect - imageAspect) < 0.1) {
-                // Aspect ratios are similar - fill screen
-                scale = Math.max(width / imgW, height / imgH);
-            } else if (imageAspect > screenAspect) {
-                // Image is wider - fit width, may have top/bottom bars
-                scale = width / imgW;
+            // Điều chỉnh tỷ lệ thành 4:3
+            // Luôn dùng target aspect = 4:3
+            let targetAspect = 4 / 3;
+            let img;
+
+            // Kích thước khung 4:3 bên trong màn hình
+            let targetWidth, targetHeight;
+            if (width / height > targetAspect) {
+                // Màn hình rộng hơn 4:3 → fit theo chiều cao
+                targetHeight = height;
+                targetWidth = height * targetAspect;
             } else {
-                // Image is taller - fit height, may have left/right bars  
-                scale = height / imgH;
+                // Màn hình hẹp hơn 4:3 → fit theo chiều rộng
+                targetWidth = width;
+                targetHeight = width / targetAspect;
             }
-            
-            // Apply scaling
+
+            // ⚡ Scale theo chiều RỘNG của khung 4:3 (ảnh sẽ bự ngang hơn)
+            let scale = targetWidth / imgW;
+
+            // Thêm ảnh
+            img = scene.add.image(width / 2, height / 2, imgKey).setOrigin(0.5);
             img.setScale(scale);
-            
-            // Perfect centering
-            img.setPosition(width / 2, height / 2);
+            img.setDepth(1001);
+            img.setScrollFactor(0);
+
+            // ✅ Multiple methods để làm ảnh smooth
+            img.texture.setFilter(Phaser.Textures.FilterMode.LINEAR);
+
+            // ✅ Thêm CSS style cho canvas để render smooth
+            if (scene.sys.game.canvas) {
+                scene.sys.game.canvas.style.imageRendering = 'auto';
+                scene.sys.game.canvas.style.imageRendering = '-webkit-optimize-contrast';
+            }
 
             // Pause timer
             if (scene.timerEvent) scene.timerEvent.paused = true;
 
-        // Flag tạm dừng gameplay
-        scene.isImageOpen = true;
+            // Flag tạm dừng gameplay
+            scene.isImageOpen = true;
 
-        // Tạo invisible overlay để chặn input xuống game phía dưới
-        const inputBlocker = scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.01);
-        inputBlocker.setDepth(999);
-        inputBlocker.setScrollFactor(0); // Fixed to camera
-        inputBlocker.setInteractive();
+            // Tạo invisible overlay để chặn input xuống game phía dưới
+            const inputBlocker = scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.01);
+            inputBlocker.setDepth(999);
+            inputBlocker.setScrollFactor(0); // Fixed to camera
+            inputBlocker.setInteractive();
 
-        // Chỉ cho phép click vào ảnh để đóng
-        img.setInteractive({ useHandCursor: true });
-        img.once('pointerdown', () => {
-            img.destroy();
-            overlay.destroy();
-            inputBlocker.destroy();
+            // Chỉ cho phép click vào ảnh để đóng
+            img.setInteractive({ useHandCursor: true });
+            img.once('pointerdown', () => {
+                img.destroy();
+                overlay.destroy();
+                inputBlocker.destroy();
 
-            // Resume gameplay
-            scene.isImageOpen = false;
-            if (scene.timerEvent) scene.timerEvent.paused = false;
-           });
+                // Resume gameplay
+                scene.isImageOpen = false;
+                if (scene.timerEvent) scene.timerEvent.paused = false;
+            });
         }
     }
 }
