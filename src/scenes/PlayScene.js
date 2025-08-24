@@ -258,21 +258,13 @@ export default class PlayScene extends Phaser.Scene {
         this.timeLeft--;
         this.timeText.setText('Time: ' + this.timeLeft);
         if (this.timeLeft <= 0) {
-            if (this.player.reachGoal()) {
-                // ✅ Check if player completed final level (level 30)
-                if (this.player.level >= 30) {
-                    // Player wins the entire game!
-                    this.scene.start('TransitionScene', { type: 'Victory', player: this.player });
-                } else {
-                    // Continue to next level
-                    this.player.goToNextLevel();
-                    // ✅ Save progress after advancing to next level
-                    this.player.saveProgress();
-                    this.scene.start('TransitionScene', { type: 'MadeGoal', player: this.player });
-                }
-            } else {
-                this.scene.start('TransitionScene', { type: 'GameOver', player: this.player });
+            // Dừng timer
+            if (this.timerEvent) {
+                this.timerEvent.destroy();
+                this.timerEvent = null;
             }
+            // Sử dụng hàm endLevel chung
+            this.endLevel();
         }
     }
 
@@ -346,6 +338,80 @@ export default class PlayScene extends Phaser.Scene {
         }
 
         entity.destroy();
+        
+        // ✅ Kiểm tra xem còn vật phẩm nào để thu thập không sau khi destroy
+        this.checkLevelCompletion();
+    }
+
+    // ✅ Kiểm tra xem còn vật phẩm nào để thu thập không
+    checkLevelCompletion() {
+        // Đếm số lượng vật phẩm có thể thu thập còn lại
+        const collectibleItems = this.mapObjects.getChildren().filter(obj => {
+            // Tính tất cả vật phẩm có thể thu thập:
+            // - Có giá trị bonus > 0
+            // - Có hiệu ứng đặc biệt (effect)
+            // - Là QuestionBag (type RandomEffect)
+            return obj.config && (
+                obj.config.bonus > 0 || 
+                obj.config.effect ||
+                obj.config.type === 'RandomEffect'
+            );
+        });
+        
+        // Nếu không còn vật phẩm nào để thu thập và còn thời gian
+        if (collectibleItems.length === 0 && this.timeLeft > 0) {
+            // Dừng timer
+            if (this.timerEvent) {
+                this.timerEvent.destroy();
+                this.timerEvent = null;
+            }
+            
+            // Hiển thị thông báo hoàn thành màn sớm
+            const completionText = this.add.text(this.cameras.main.centerX, 100, 
+                'ĐÃ THU THẬP HẾT!\nHoàn thành màn sớm!', {
+                fontFamily: 'Kurland',
+                fontSize: '16px',
+                fill: '#00ff00',
+                stroke: '#000000',
+                strokeThickness: 3,
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            // Tween hiệu ứng cho thông báo
+            this.tweens.add({
+                targets: completionText,
+                scaleX: 1.2,
+                scaleY: 1.2,
+                duration: 500,
+                yoyo: true,
+                onComplete: () => {
+                    // Chờ một chút rồi chuyển scene
+                    this.time.delayedCall(1000, () => {
+                        completionText.destroy();
+                        this.endLevel();
+                    });
+                }
+            });
+        }
+    }
+
+    // ✅ Hàm kết thúc màn chơi
+    endLevel() {
+        if (this.player.reachGoal()) {
+            // ✅ Check if player completed final level (level 30)
+            if (this.player.level >= 30) {
+                // Player wins the entire game!
+                this.scene.start('TransitionScene', { type: 'Victory', player: this.player });
+            } else {
+                // Continue to next level
+                this.player.goToNextLevel();
+                // ✅ Save progress after advancing to next level
+                this.player.saveProgress();
+                this.scene.start('TransitionScene', { type: 'MadeGoal', player: this.player });
+            }
+        } else {
+            this.scene.start('TransitionScene', { type: 'GameOver', player: this.player });
+        }
     }
 
     // ✅ Cleanup khi scene kết thúc
@@ -356,6 +422,7 @@ export default class PlayScene extends Phaser.Scene {
         // Stop timer
         if (this.timerEvent) {
             this.timerEvent.destroy();
+            this.timerEvent = null;
         }
     }
 

@@ -100,7 +100,7 @@ export default class Hook {
             let backSpeed = C.HOOK_GRAB_SPEED;
             if (this.grabbedEntity) {
                 let mass = (this.grabbedEntity.config.mass || 3) * 2.5;
-                let strength = this.scene.player.hasStrengthDrink ? this.scene.player.strength : 1.25;
+                let strength = this.scene.player.hasStrengthDrink ? this.scene.player.strength : 1.3;
                 
                 // ✅ Golden Hook effect - double speed
                 if (this.scene.player.hasGoldenHook) {
