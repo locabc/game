@@ -38,6 +38,7 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('TimeCrystal', 'images/diamond.png'); // Use diamond for time crystal
         this.load.image('MagnetStone', 'images/rock_normal.png'); // Use rock for magnet stone
         this.load.image('LuckyStar', 'images/light.png'); // Use light for lucky star
+        this.load.image('GiftBox', 'images/gift.png'); // Biểu tượng hộp quà 🎁
         
         // UI and others
         this.load.image('MenuArrow', 'images/menu_arrow.png');

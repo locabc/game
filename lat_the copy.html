@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Trò Chơi Lật Thẻ Ký Ức</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- CÀI ĐẶT BIẾN VÀ RESET CSS --- */
+        :root {
+            --bg-color: #1a202c;
+            --card-bg: #2d3748;
+            --primary-color: #4299e1;
+            --text-color: #e2e8f0;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+            --border-radius: 12px;
+            --card-size: 120px;
+            --wheel-size: 300px;
+            --gold-color: #f6e05e;
+            --green-color: #48bb78;
+            --red-color: #f56565;
+            --gray-color: #a0aec0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            overflow: hidden;
+        }
+        
+        body.embedded {
+            padding: 10px;
+        }
+
+        /* --- NÚT ĐIỀU KHIỂN NHẠC NỀN --- */
+        #music-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: none;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px var(--shadow-color);
+            z-index: 101;
+            transition: transform 0.2s;
+        }
+
+        #music-toggle:active {
+            transform: scale(0.9);
+        }
+
+        #music-toggle svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* --- CONTAINER CHÍNH CỦA GAME --- */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 4px var(--shadow-color);
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 30px;
+            background-color: var(--card-bg);
+            padding: 10px 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px var(--shadow-color);
+            font-size: 1.2rem;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            perspective: 1000px;
+        }
+
+        .card {
+            width: var(--card-size);
+            height: var(--card-size);
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            border-radius: var(--border-radius);
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched,
+        .board-locked .card:not(.flipped) {
+            pointer-events: none;
+        }
+
+        .card.matched {
+            opacity: 0.5;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 8px var(--shadow-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            font-size: 4rem;
+            color: var(--primary-color);
+        }
+
+        .card-back {
+            background-color: var(--card-bg);
+            transform: rotateY(180deg);
+        }
+
+        .card-back img {
+            width: 80%;
+            height: 80%;
+            object-fit: contain;
+        }
+
+        .reset-button {
+            padding: 12px 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 4px 10px rgba(66, 153, 225, 0.4);
+        }
+
+        .reset-button:hover {
+            background-color: #2b6cb0;
+        }
+
+        .reset-button:active {
+            transform: scale(0.98);
+        }
+
+        /* --- POPUP CHIẾN THẮNG & VÒNG QUAY MAY MẮN --- */
+        .win-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease, backdrop-filter 0.6s ease;
+            backdrop-filter: blur(0px);
+        }
+
+        .win-popup.show {
+            opacity: 1;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+        }
+
+        .popup-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            transform: scale(0.3) translateY(100px);
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.6s ease;
+            opacity: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 400px;
+            max-width: 90vw;
+        }
+
+        .win-popup.show .popup-content {
+            transform: scale(1) translateY(0px);
+            opacity: 1;
+        }
+
+        .popup-content h2 {
+            font-size: 3rem;
+            color: #FFD700; /* Màu vàng sáng hơn */
+            margin-top: 10px;
+            text-shadow: 0 2px 10px rgba(255, 255, 255, 0.7), 0 -2px 10px rgba(0, 0, 0, 0.5);
+            font-weight: bold;
+        }
+        /* --- HỘP QUÀ --- */
+        .gift-boxes-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 cột */
+            gap: 15px;
+            margin-top: 20px;
+            max-width: 500px;
+            width: 100%;
+            transform: translateX(-25px);
+        }
+        .gift-box {
+            width: 120px;
+            height: 120px;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.6s ease-out;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background-color: var(--card-bg);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        .gift-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+        }
+        .gift-box.opened {
+            transform: scale(1.05);
+            pointer-events: none;
+        }
+        .gift-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; 
+            transition: opacity 0.3s ease, transform 0.6s ease;
+            backface-visibility: hidden; 
+            position: absolute; 
+            top: 0; left: 0;
+        }
+        .gift-box .gift-front {
+            opacity: 1;
+            z-index: 2; 
+            transform: rotateY(0deg);
+        }
+        .gift-box .gift-back {
+            opacity: 0;
+            z-index: 1; 
+            transform: rotateY(180deg);
+        }
+        .gift-box.opened .gift-front {
+            transform: rotateY(-180deg);
+            opacity: 0;
+        }
+        .gift-box.opened .gift-back {
+            transform: rotateY(0deg);
+            opacity: 1;
+        }
+        #play-again-btn { margin-top: 20px; }
+        /* Responsive cho hộp quà */
+        @media (max-width: 480px) {
+            .gift-boxes-container {
+                grid-template-columns: repeat(2, 1fr); /* 2 cột trên màn hình nhỏ */
+            }
+            .gift-box {
+                width: 100px;
+                height: 100px;
+            }
+        }
+        /* --- KHUNG THÔNG BÁO PHẦN THƯỞNG (MODAL) --- */
+        .prize-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); 
+            backdrop-filter: blur(5px); 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200; 
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .prize-modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .prize-modal-content {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            width: 90%;
+            max-width: 500px; 
+            min-height: 200px; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+        .prize-modal-overlay.show .prize-modal-content {
+            transform: scale(1);
+        }
+        .prize-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 45px;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 2.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        #prize-modal-text {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        #prize-modal-image-container img {
+            max-width: 360px;
+            max-height: 400px;
+            border-radius: var(--border-radius);
+            margin-top: 10px;
+        }
+        /* Thông báo bấm để đóng */
+        .close-hint {
+            position: absolute;
+            bottom: -30px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #fff;
+            font-size: 14px;
+            opacity: 0.8;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            animation: pulse 1.5s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { opacity: 0.5; }
+            to { opacity: 1; }
+        }
+
+        /* --- RESPONSIVE DESIGN --- */
+        @media (max-width: 768px) {
+            :root {
+                --card-size: 90px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                --card-size: 70px;
+                --wheel-size: 250px;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .wheel-segment {
+                font-size: 10px;
+            }
+
+            .wheel-segment:nth-child(1) {
+                transform: rotate(45deg) translate(65px) rotate(-45deg);
+            }
+
+            .wheel-segment:nth-child(2) {
+                transform: rotate(135deg) translate(65px) rotate(-135deg);
+            }
+
+            .wheel-segment:nth-child(3) {
+                transform: rotate(225deg) translate(65px) rotate(-225deg);
+            }
+
+            .wheel-segment:nth-child(4) {
+                transform: rotate(315deg) translate(65px) rotate(-315deg);
+            }
+        }
+        
+        /* --- FIX CHO IFRAME --- */
+        @media screen and (max-height: 800px) {
+            body {
+                padding: 0;
+            }
+            
+            .game-board {
+                grid-template-columns: repeat(4, var(--card-size));
+                grid-template-rows: repeat(3, var(--card-size));
+                grid-gap: 12px;
+            }
+        }
+        
+        /* Hiệu ứng tỏa sáng cho popup chiến thắng */
+        .win-effects {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .sparkle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #fff 0%, transparent 70%);
+            animation: sparkleAnim 2s infinite;
+        }
+        
+        .sparkle:nth-child(1) {
+            top: 10%;
+            left: 20%;
+            animation-delay: 0s;
+        }
+        
+        .sparkle:nth-child(2) {
+            top: 15%;
+            right: 20%;
+            animation-delay: 0.3s;
+        }
+        
+        .sparkle:nth-child(3) {
+            bottom: 30%;
+            left: 15%;
+            animation-delay: 0.6s;
+        }
+        
+        .sparkle:nth-child(4) {
+            bottom: 30%;
+            right: 15%;
+            animation-delay: 0.9s;
+        }
+        
+        @keyframes sparkleAnim {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        /* Hiệu ứng cho ảnh phần thưởng */
+        .prize-image-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+        
+        /* Container popup ảnh phần thưởng độc lập */
+        .prize-popup-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 201;
+            animation: fadeIn 0.3s ease-out forwards;
+            max-width: 90%;
+            cursor: pointer;
+        }
+        
+        .prize-popup-text {
+            color: #FFD700;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Overlay mờ phía sau khi hiển thị ảnh */
+        .prize-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 200; /* Đảm bảo hiển thị trên tất cả các phần tử khác */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            animation: fadeIn 0.5s ease-out forwards;
+            cursor: pointer; /* Hiển thị con trỏ pointer khi hover để biết có thể click */
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .prize-sparkle {
+            position: absolute;
+            background: radial-gradient(circle, #FFD700 0%, transparent 70%);
+            border-radius: 50%;
+            animation: prizeSparkle 3s infinite;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        @keyframes prizeSparkle {
+            0% { opacity: 0; transform: translateY(0) scale(0.5); }
+            50% { opacity: 1; transform: translateY(-20px) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+        }
+        
+        /* Tăng kích thước thẻ mặc định */
+        :root {
+            --card-size: 130px; /* Tăng kích thước thẻ mặc định */
+        }
+        
+        @media screen and (max-height: 700px) {
+            :root {
+                --card-size: 110px; /* Vẫn giữ kích thước thẻ lớn hơn cho màn hình thấp */
+            }
+            
+            .game-container {
+                gap: 15px;
+            }
+            
+            .game-board {
+                grid-gap: 12px; /* Giảm khoảng cách giữa các thẻ */
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 0;
+            }
+            
+            .stats-container {
+                padding: 5px 15px;
+            }
+        }
+        
+        @media screen and (max-height: 600px) {
+            :root {
+                --card-size: 90px; /* Kích thước thẻ nhỏ hơn cho màn hình rất thấp nhưng vẫn lớn hơn trước */
+            }
+            
+            .game-container {
+                gap: 10px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .reset-button {
+                padding: 8px 20px;
+                margin-top: 10px;
+            }
+        }
+        /* Hiệu ứng tỏa sáng cho popup chiến thắng */
+        .win-effects {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .sparkle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #fff 0%, transparent 70%);
+            animation: sparkleAnim 2s infinite;
+        }
+
+        .sparkle:nth-child(1) {
+            top: 10%;
+            left: 20%;
+            animation-delay: 0s;
+        }
+
+        .sparkle:nth-child(2) {
+            top: 15%;
+            right: 20%;
+            animation-delay: 0.3s;
+        }
+
+        .sparkle:nth-child(3) {
+            bottom: 30%;
+            left: 15%;
+            animation-delay: 0.6s;
+        }
+
+        .sparkle:nth-child(4) {
+            bottom: 30%;
+            right: 15%;
+            animation-delay: 0.9s;
+        }
+
+        @keyframes sparkleAnim {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        
+        /* Animation cho banner */
+        @keyframes fadeInScale {
+            from { 
+                opacity: 0; 
+                transform: translateX(-50%) scale(0.5); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateX(-50%) scale(1); 
+            }
+        }
+        
+        @keyframes fadeOutScale {
+            from { 
+                opacity: 1; 
+                transform: translateX(-50%) scale(1); 
+            }
+            to { 
+                opacity: 0; 
+                transform: translateX(-50%) scale(0.5); 
+            }
+        }
+        
+        /* Hiệu ứng lấp lánh cho ảnh phần thưởng */
+        .prize-image-sparkle {
+            position: relative;
+            animation: prizeGlow 2s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 10px #FFD700);
+        }
+        
+        @keyframes prizeGlow {
+            0% {
+                filter: drop-shadow(0 0 10px #FFD700) brightness(1);
+                transform: scale(1);
+            }
+            50% {
+                filter: drop-shadow(0 0 20px #FFD700) drop-shadow(0 0 30px #FFA500) brightness(1.1);
+                transform: scale(1.02);
+            }
+            100% {
+                filter: drop-shadow(0 0 15px #FFD700) brightness(1.05);
+                transform: scale(1.01);
+            }
+        }
+        
+        /* Hiệu ứng lấp lánh xung quanh ảnh */
+        .image-sparkle-effect {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, #FFD700 0%, #FFA500 50%, transparent 100%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: imageSparkleFloat 3s ease-in-out infinite;
+            z-index: 10;
+        }
+        
+        @keyframes imageSparkleFloat {
+            0% {
+                opacity: 0;
+                transform: translateY(0) scale(0.5);
+            }
+            20% {
+                opacity: 1;
+                transform: translateY(-10px) scale(1);
+            }
+            80% {
+                opacity: 1;
+                transform: translateY(-20px) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.5);
+            }
+        }
+        
+        /* Animation cho hạt vàng rơi của giải đặc biệt */
+        @keyframes goldDropFall {
+            0% {
+                transform: translateY(-20px) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                opacity: 1;
+                transform: translateY(200px) rotate(180deg);
+            }
+            100% {
+                transform: translateY(400px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        /* Animation cho hiệu ứng glow đặc biệt */
+        @keyframes specialPrizeGlow {
+            0% {
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                background: var(--card-bg);
+            }
+            50% {
+                box-shadow: 0 10px 40px rgba(255, 215, 0, 0.6), 0 0 50px rgba(255, 215, 0, 0.4);
+                background: linear-gradient(135deg, var(--card-bg) 0%, rgba(255, 215, 0, 0.1) 100%);
+            }
+            100% {
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                background: var(--card-bg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Nhạc nền -->
+    <audio id="background-audio" loop>
+        <source src="audios/music.mp3" type="audio/mp3">
+        Trình duyệt của bạn không hỗ trợ thẻ audio.
+    </audio>
+    <button id="music-toggle">
+        <svg id="icon-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.243 5.757L16.828 4.343L12 9.172L7.172 4.343L5.757 5.757L10.586 10.586L5.757 15.414L7.172 16.828L12 11.999L16.828 16.828L18.243 15.414L13.414 10.586L18.243 5.757Z"></path>
+            <path d="M21 12.001c0-1.296-.445-2.493-1.21-3.461l-1.414 1.414C18.786 10.561 19 11.251 19 12.001s-.214 1.44-.625 2.048l1.414 1.414C20.555 14.494 21 13.297 21 12.001zM4.717 3.284L2.93 5.071l3.873 3.873L3 12.001c0 2.314 1.213 4.323 3 5.416v-2.134c-1.002-.712-1.667-1.851-1.667-3.149l3.05 3.05c.057.002.114.004.17.004h.28l4.414 4.414 1.787-1.787L4.717 3.284z"></path>
+        </svg>
+        <svg id="icon-unmuted" style="display:none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.031 10.595a.999.999 0 0 1 0 1.414c-1.04 1.04-1.04 2.724 0 3.764a.999.999 0 0 1 0 1.414c-1.562 1.562-4.095 1.562-5.657 0a.999.999 0 0 1 1.414-1.414c.781.781 2.047.781 2.828 0a.999.999 0 0 1 0-1.414c-1.04-1.04-1.04-2.724 0-3.764a.999.999 0 0 1 0-1.414c.781-.781 2.047-.781 2.828 0a.999.999 0 0 1 1.414 1.414zM3 12c0-2.314 1.213-4.323 3-5.416v10.832C4.213 16.323 3 14.314 3 12zm8.001-6.416-3.054 3.054a.999.999 0 0 1-.293.707L3.293 13.707a.999.999 0 0 1-1.414-1.414l4.36-4.36a.998.998 0 0 1 1.413 0l3.055 3.054a.999.999 0 1 1-1.414 1.414L6.24 9.343C6.088 9.19 6 8.98 6 8.764V6.584a.999.999 0 0 1 1.62-.791l3.087 2.47a.998.998 0 0 1 0 1.582L8 12.313l3.001-3.001v-2.728z"></path>
+        </svg>
+    </button>
+
+    <div class="game-container">
+        <h1>Lật Thẻ Ký Ức</h1>
+        <div class="stats-container">
+            <div class="stat">Số lần lật: <span id="moves-count">0</span></div>
+        </div>
+        <div class="game-board" id="game-board"></div>
+       
+    </div>
+
+    <div class="win-popup" id="win-popup">
+    <div class="popup-content">
+        <h2>Chiến Thắng!</h2>
+        <div class="win-effects">
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+        </div>
+        <p>Chọn một hộp quà may mắn!</p>
+        <div class="gift-boxes-container" id="gift-boxes-container">
+            </div>   
+
+           
+        </div>
+    </div>
+     </div> <div class="prize-modal-overlay" id="prize-modal-overlay">
+       <div class="prize-modal-content">
+           <button class="prize-modal-close" id="prize-modal-close">&times;</button>
+           <div id="prize-modal-text"></div>
+           <div id="prize-modal-image-container"></div>
+       </div>
+    </div>
+    <script>
+        // Kiểm tra xem game có được nhúng trong iframe không
+        function checkIfEmbedded() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const embedded = urlParams.get('embedded');
+                if (embedded === 'true') {
+                    // Thêm class để tối ưu cho trường hợp iframe
+                    document.body.classList.add('embedded');
+                }
+            } catch (e) {
+                console.error('Error checking embedding:', e);
+            }
+        }
+    
+        document.addEventListener('DOMContentLoaded', () => {
+            // Kiểm tra nếu đang chạy trong iframe
+            checkIfEmbedded();
+            // --- CẤU HÌNH GAME ---
+            const imageNames = ['tao', 'dau', 'le', 'xoai', 'quyt', 'cam'].map(name => `images/${name}.png`);
+            const prizeImageFile = 'images/prize-image.png';// Ảnh phần thưởng
+            //const prizeImageFile = 'prize-image.png';
+            
+            // --- HÀM KIỂM TRA ẢNH ---
+            function checkImageExists(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(src);
+                    img.onerror = () => reject(src);
+                    img.src = src;
+                });
+            }
+            
+            // Kiểm tra các ảnh quan trọng khi khởi động
+            async function validateImages() {
+                const importantImages = [
+                    prizeImageFile,
+                    'images/dynamite.png',
+                    'images/gift-closed.png',
+                    'images/gift-empty.png',
+                    'images/gift-extra.png',
+                    'images/gift-sparkle.png'
+                ];
+                
+                for (const imagePath of importantImages) {
+                    try {
+                        await checkImageExists(imagePath);
+                        // console.log('✓ Ảnh tải thành công:', imagePath);
+                    } catch (err) {
+                        console.error('✗ Không thể tải ảnh:', err);
+                    }
+                }
+            }
+            
+            // Gọi kiểm tra ảnh
+            validateImages();
+            
+            // --- LẤY CÁC PHẦN TỬ DOM ---
+            const gameBoard = document.getElementById('game-board');
+            const movesCountSpan = document.getElementById('moves-count');
+            const resetButton = document.getElementById('reset-btn');
+            // Popup
+            const winPopup = document.getElementById('win-popup');
+            // Nhạc nền
+            const audio = document.getElementById('background-audio');
+            const musicToggle = document.getElementById('music-toggle');
+            const iconMuted = document.getElementById('icon-muted');
+            const iconUnmuted = document.getElementById('icon-unmuted');
+            const giftBoxesContainer = document.getElementById('gift-boxes-container'); 
+            const prizeModalOverlay = document.getElementById('prize-modal-overlay');
+            const prizeModalText = document.getElementById('prize-modal-text');
+            const prizeModalImageContainer = document.getElementById('prize-modal-image-container');
+            const prizeModalClose = document.getElementById('prize-modal-close');
+
+            // --- BIẾN TRẠNG THÁI GAME ---
+            let hasFlippedCard = false;
+            let lockBoard = false;
+            let firstCard, secondCard;
+            let moves = 0;
+            let matchedPairs = 0;
+            const totalPairs = imageNames.length;
+            let isMusicPlaying = false;
+            let isFirstFlip = true;
+            let prizeAwarded = false;
+            let hasExtraTurn = false; // Biến để theo dõi có lượt mở thêm hay không
+            let extraTurnUsed = false; // Biến để theo dõi đã sử dụng lượt thêm chưa
+            window.prizeMessageSent = false; // Biến để theo dõi việc đã gửi tin nhắn chưa
+
+            // THAY THẾ TOÀN BỘ MẢNG 'prizes' CŨ BẰNG MẢNG MỚI NÀY
+            const prizes = [
+                { text: "Chúc bạn may mắn lần sau!", type: 'text', weight: 25, frontImage: 'images/gift-closed.png', backImage: 'images/gift-empty.png' },
+                { text: "Bạn nhận được một đóng băng!", type: 'text', weight: 10, frontImage: 'images/gift-closed.png', backImage: 'images/gift-sparkle.png' },
+                { text: "Thêm 1 lượt mở quà!", type: 'text', weight: 10, frontImage: 'images/gift-closed.png', backImage: 'images/gift-extra.png' },
+                { text: "Nhận 1 bức ảnh!", type: 'image', weight: 5, frontImage: 'images/gift-closed.png', backImage: 'images/gift-extra.png' },
+                { text: "Giải đặc biệt!", type: 'text', weight: 5, frontImage: 'images/gift-closed.png', backImage: 'images/gift-sparkle.png' },
+                { text: "Chúc mừng bạn quay vào ô mất lượt", type: 'text', weight: 15, frontImage: 'images/gift-closed.png', backImage: 'images/gift-empty.png' },
+                { text: "Bạn nhận được 1000 GOLD!", type: 'text', weight: 10, frontImage: 'images/gift-closed.png', backImage: 'images/gift-sparkle.png' },
+                { text: "Lần sau thử lại nhé!", type: 'text', weight: 10, frontImage: 'images/gift-closed.png', backImage: 'images/gift-empty.png' },
+                { text: "Nhận được 2 thuốc nổ", type: 'image', weight: 10, frontImage: 'images/gift-closed.png', backImage: 'images/gift-sparkle.png' }
+            ];
+            // --- HÀM XỬ LÝ NHẠC NỀN ---
+            function toggleMusic() {
+                if (audio.paused) {
+                    audio.play().catch(e => {/* Không thể phát nhạc */});
+                    iconMuted.style.display = 'none';
+                    iconUnmuted.style.display = 'block';
+                } else {
+                    audio.pause();
+                    iconMuted.style.display = 'block';
+                    iconUnmuted.style.display = 'none';
+                }
+            }
+            musicToggle.addEventListener('click', toggleMusic);
+
+            // --- HÀM XÁO TRỘN MẢNG ---
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            // --- HÀM TẠO BẢNG CHƠI ---
+            function createBoard() {
+                const cardArray = [...imageNames, ...imageNames];
+                shuffle(cardArray);
+                gameBoard.innerHTML = '';
+                cardArray.forEach(name => {
+                    const card = document.createElement('div');
+                    card.classList.add('card');
+                    card.dataset.name = name;
+                    card.innerHTML = `
+                          <div class="card-face card-front">?</div>
+                          <div class="card-face card-back">
+                               <img src="${name}" alt="Hình ${name}">
+                          </div>
+                      `;
+                    card.addEventListener('click', flipCard);
+                    gameBoard.appendChild(card);
+                });
+            }
+
+            // --- HÀM XỬ LÝ LẬT THẺ ---
+            function flipCard() {
+                if (lockBoard || this === firstCard) return;
+
+                // Bắt đầu phát nhạc ở lần lật đầu tiên
+                if (isFirstFlip) {
+                    isFirstFlip = false;
+                    if (audio.paused) {
+                        toggleMusic();
+                    }
+                }
+
+                this.classList.add('flipped');
+                if (!hasFlippedCard) {
+                    hasFlippedCard = true;
+                    firstCard = this;
+                    return;
+                }
+                secondCard = this;
+                incrementMoves();
+                checkForMatch();
+            }
+
+            function checkForMatch() {
+                const isMatch = firstCard.dataset.name === secondCard.dataset.name;
+                isMatch ? disableCards() : unflipCards();
+            }
+
+            function disableCards() {
+                firstCard.classList.add('matched');
+                secondCard.classList.add('matched');
+                matchedPairs++;
+                if (matchedPairs === totalPairs) {
+                    setTimeout(showWinPopup, 700);
+                }
+                resetBoardState();
+            }
+
+            function unflipCards() {
+                lockBoard = true;
+                gameBoard.classList.add('board-locked');
+                setTimeout(() => {
+                    firstCard.classList.remove('flipped');
+                    secondCard.classList.remove('flipped');
+                    resetBoardState();
+                }, 1200);
+            }
+
+            function resetBoardState() {
+                [hasFlippedCard, lockBoard] = [false, false];
+                [firstCard, secondCard] = [null, null];
+                gameBoard.classList.remove('board-locked');
+            }
+
+            function incrementMoves() {
+                moves++;
+                movesCountSpan.textContent = moves;
+            }
+
+            // --- HÀM XỬ LÝ POPUP & VÒNG QUAY ---
+            function showWinPopup() {
+                winPopup.classList.add('show');
+                createGiftBoxes(); // Gọi hàm tạo hộp quà
+            }
+
+            // THÊM CÁC HÀM MỚI NÀY TỪ lat_the2.html
+            function createGiftBoxes() {
+                giftBoxesContainer.innerHTML = ''; // Xóa hộp quà cũ
+                prizeAwarded = false; // Reset trạng thái
+
+                const prizePool = [];
+                for (const prize of prizes) {
+                    for (let i = 0; i < prize.weight; i++) {
+                        prizePool.push(prize);
+                    }
+                }
+                shuffle(prizePool);
+
+                const selectedPrizes = prizePool.slice(0, 9); // Lấy 9 hộp quà
+
+                selectedPrizes.forEach((prize) => {
+                    const giftBox = document.createElement('div');
+                    giftBox.classList.add('gift-box');
+                    
+                    giftBox.innerHTML = `
+                        <img class="gift-front" src="${prize.frontImage}" alt="Hộp quà đóng" onerror="console.error('Lỗi tải ảnh hộp quà:', this.src); this.onerror=null; this.src='https://placehold.co/120x120/4a5568/e2e8f0?text=Hộp+Quà';">
+                        <img class="gift-back" src="${prize.backImage}" alt="Hộp quà mở" onerror="console.error('Lỗi tải ảnh mở quà:', this.src); this.onerror=null; this.src='https://placehold.co/120x120/2d3748/e2e8f0?text=Phần+Thưởng';">
+                    `;
+                    
+                    giftBox.addEventListener('click', () => openGiftBox(giftBox, prize));
+                    giftBoxesContainer.appendChild(giftBox);
+                });
+            }
+            function openGiftBox(selectedBox, prize) {
+                if (prizeAwarded && !hasExtraTurn) return;
+
+                // Nếu đang trong lượt thêm, đánh dấu đã sử dụng
+                if (hasExtraTurn) {
+                    extraTurnUsed = true;
+                    hasExtraTurn = false;
+                }
+
+                // Disable các hộp khác nếu không có lượt thêm
+                if (!hasExtraTurn) {
+                    prizeAwarded = true;
+                    Array.from(giftBoxesContainer.children).forEach(box => {
+                        if (box !== selectedBox) {
+                            box.style.pointerEvents = 'none';
+                            box.style.opacity = '0.7';
+                        }
+                    });
+                } else {
+                    // Chỉ disable hộp đã mở
+                    selectedBox.style.pointerEvents = 'none';
+                    selectedBox.style.opacity = '0.7';
+                }
+
+                selectedBox.classList.add('opened');
+
+                setTimeout(() => {
+                    prizeModalText.textContent = prize.text;
+                    prizeModalImageContainer.innerHTML = ''; 
+                    
+                    // Xác định phần thưởng dựa theo nội dung text
+                    let rewardData = {
+                        type: 'money',
+                        value: 100
+                    };
+                    
+                    let shouldShowModal = true;
+                    let shouldCloseImmediately = false;
+                    
+                    // Xử lý các trường hợp phần thưởng khác nhau
+                    if (prize.text.includes("Lần sau thử lại") || 
+                        prize.text.includes("Chúc mừng bạn quay vào ô mất lượt") || 
+                        prize.text.includes("Chúc bạn may mắn lần sau")) {
+                        // Hiển thị banner không trúng và quay về game đào vàng tiếp tục
+                        showNoPrizeBanner(prize.text);
+                        rewardData = {
+                            type: 'close',
+                            value: 0
+                        };
+                        shouldShowModal = false; // Không hiển thị modal, chỉ hiển thị banner
+                        shouldCloseImmediately = true;
+                    } 
+                    else if (prize.text.includes("đóng băng")) {
+                        // Thêm 1 đóng băng
+                        rewardData = {
+                            type: 'freeze',
+                            value: 1
+                        };
+                    }
+                    else if (prize.text.includes("Thêm 1 lượt mở quà")) {
+                        // Cho phép mở thêm 1 hộp quà
+                        hasExtraTurn = true;
+                        prizeAwarded = false; // Reset để có thể mở tiếp
+                        showExtraTurnMessage();
+                        return; // Không gửi message về parent, chờ mở hộp tiếp theo
+                    }
+                    else if (prize.text.includes("Nhận 1 bức ảnh")) {
+                        // Hiển thị ảnh với hiệu ứng lấp lánh
+                        const img = document.createElement('img');
+                        img.src = prizeImageFile;
+                        img.alt = 'Ảnh phần thưởng';
+                        img.style.maxWidth = '300px';
+                        img.style.maxHeight = '300px';
+                        img.onerror = function() { 
+                            console.error('Không thể tải ảnh phần thưởng từ:', prizeImageFile);
+                            this.src = 'https://placehold.co/300x300/4299e1/ffffff?text=Ảnh+Phần+Thưởng'; 
+                        };
+                        
+                        // Tạo container cho ảnh và hiệu ứng
+                        const imageContainer = document.createElement('div');
+                        imageContainer.style.position = 'relative';
+                        imageContainer.style.display = 'inline-block';
+                        
+                        // Thêm class cho hiệu ứng
+                        img.classList.add('prize-image-sparkle');
+                        
+                        imageContainer.appendChild(img);
+                        prizeModalImageContainer.appendChild(imageContainer);
+                        
+                        // Tạo hiệu ứng lấp lánh xung quanh ảnh
+                        createImageSparkles(imageContainer);
+                        
+                        rewardData = {
+                            type: 'image',
+                            value: 1
+                        };
+                    }
+                    else if (prize.text.includes("Giải đặc biệt")) {
+                        // Hiển thị thông báo đặc biệt với hiệu ứng
+                        prizeModalText.innerHTML = '🎉 <span style="color: #FFD700; font-size: 1.8rem; text-shadow: 0 0 10px #FFD700;">GIẢI ĐẶC BIỆT!</span><br><br>' +
+                            '<span style="color: #48bb78; font-size: 1.4rem;">Bạn đã mở được giải đặc biệt</span><br>' +
+                            '<span style="color: #FFA500; font-size: 1.3rem;">Chuyển sang màn tiếp theo + 5000 GOLD</span>';
+                        
+                        // Tạo hiệu ứng vàng rơi xung quanh
+                        createSpecialPrizeEffect();
+                        
+                        // Gửi cả gold và level
+                        rewardData = {
+                            type: 'special_prize',
+                            value: 1,
+                            gold: 5000,
+                            nextLevel: true
+                        };
+                        shouldShowModal = true; // Hiển thị modal để người chơi thấy thông báo
+                        shouldCloseImmediately = false; // Không đóng ngay, cho xem thông báo
+                    }
+                    else if (prize.text.includes("nhận được 1000 GOLD")) {
+                        // Hiển thị cộng 1000 GOLD rồi đóng trở về đào vàng
+                        rewardData = {
+                            type: 'money',
+                            value: 1000
+                        };
+                    }
+                    else if (prize.text.includes("Thêm 1 lượt")) {
+                        rewardData = {
+                            type: 'dynamite',
+                            value: 1
+                        };
+                    }
+                    else if (prize.text.includes("Nhận được 2 thuốc nổ")) {
+                        rewardData = {
+                            type: 'dynamite',
+                            value: 2
+                        };
+                        // Hiển thị ảnh thuốc nổ
+                        const img = document.createElement('img');
+                        img.src = "images/dynamite.png";
+                        img.alt = 'Thuốc nổ';
+                        img.style.maxWidth = '200px';
+                        img.style.maxHeight = '200px';
+                        img.onerror = function() { 
+                            console.error('Không thể tải ảnh thuốc nổ từ:', this.src);
+                            this.src = 'https://placehold.co/200x200/ff4500/ffffff?text=Thuốc+Nổ'; 
+                        };
+                        prizeModalImageContainer.appendChild(img);
+                    }
+                    
+                    // Gửi tin nhắn về window cha
+                    if (window.parent && window.parent !== window) {
+                        try {
+                            window.prizeMessageSent = true; // Đánh dấu đã gửi tin nhắn
+                            const message = {
+                                type: 'cardGameCompleted',
+                                reward: rewardData || { type: 'close', value: 0 } // Đảm bảo luôn có reward object
+                            };
+                            // Log để debug
+                            // console.log("Gửi tin nhắn:", JSON.stringify(message));
+                            window.parent.postMessage(message, '*');
+                        } catch (err) {
+                            console.error("Lỗi khi gửi tin nhắn:", err);
+                        }
+                    }
+
+                    if (shouldCloseImmediately) {
+                        // Đóng iframe ngay lập tức nếu cần
+                        if (window.parent && window.parent !== window) {
+                            try {
+                                // Tạo và dispatch một sự kiện click trên nút đóng iframe
+                                const closeEvent = new Event('closeIframe');
+                                window.dispatchEvent(closeEvent);
+                            } catch (err) {
+                                console.error("Lỗi khi đóng iframe:", err);
+                            }
+                        }
+                    } else if (shouldShowModal) {
+                        prizeModalOverlay.classList.add('show');
+                        
+                        // Thiết lập timer tự động đóng sau 7 giây
+                        window.autoCloseTimer = setTimeout(() => {
+                            if (prizeModalOverlay.classList.contains('show')) {
+                                closePrizeModal();
+                            }
+                        }, 7000);
+                    }
+                }, 800);
+            }
+
+            // Hàm hiển thị banner không trúng
+            function showNoPrizeBanner(message) {
+                // Tạo banner
+                const banner = document.createElement('div');
+                banner.style.position = 'fixed';
+                banner.style.top = '20%';
+                banner.style.left = '50%';
+                banner.style.transform = 'translateX(-50%)';
+                banner.style.backgroundColor = '#f56565';
+                banner.style.color = 'white';
+                banner.style.padding = '20px 40px';
+                banner.style.borderRadius = '15px';
+                banner.style.fontSize = '18px';
+                banner.style.fontWeight = 'bold';
+                banner.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+                banner.style.zIndex = '1003';
+                banner.style.textAlign = 'center';
+                banner.style.animation = 'fadeInScale 0.5s ease-out';
+                banner.textContent = message;
+                
+                document.body.appendChild(banner);
+                
+                // Tự động ẩn banner sau 2.5 giây
+                setTimeout(() => {
+                    banner.style.animation = 'fadeOutScale 0.5s ease-in';
+                    setTimeout(() => {
+                        document.body.removeChild(banner);
+                        // Sau khi ẩn banner thì đóng game
+                        setTimeout(() => {
+                            if (window.parent && window.parent !== window) {
+                                const closeEvent = new Event('closeIframe');
+                                window.dispatchEvent(closeEvent);
+                            }
+                        }, 500);
+                    }, 500);
+                }, 2500);
+            }
+            
+            // Hàm hiển thị thông báo lượt thêm
+            function showExtraTurnMessage() {
+                // Tạo thông báo lượt thêm
+                const message = document.createElement('div');
+                message.style.position = 'fixed';
+                message.style.top = '20%';
+                message.style.left = '50%';
+                message.style.transform = 'translateX(-50%)';
+                message.style.backgroundColor = '#48bb78';
+                message.style.color = 'white';
+                message.style.padding = '20px 40px';
+                message.style.borderRadius = '15px';
+                message.style.fontSize = '18px';
+                message.style.fontWeight = 'bold';
+                message.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+                message.style.zIndex = '1003';
+                message.style.textAlign = 'center';
+                message.style.animation = 'fadeInScale 0.5s ease-out';
+                message.innerHTML = '🎉 Chúc mừng!<br>Bạn được mở thêm 1 hộp quà!';
+                
+                document.body.appendChild(message);
+                
+                // Tự động ẩn thông báo sau 2 giây
+                setTimeout(() => {
+                    message.style.animation = 'fadeOutScale 0.5s ease-in';
+                    setTimeout(() => {
+                        document.body.removeChild(message);
+                    }, 500);
+                }, 2000);
+                
+                // Re-enable các hộp còn lại
+                Array.from(giftBoxesContainer.children).forEach(box => {
+                    if (!box.classList.contains('opened')) {
+                        box.style.pointerEvents = 'auto';
+                        box.style.opacity = '1';
+                    }
+                });
+            }
+            
+            // Hàm tạo hiệu ứng lấp lánh xung quanh ảnh
+            function createImageSparkles(container) {
+                // Tạo 15 đốm sáng lấp lánh xung quanh ảnh
+                for (let i = 0; i < 15; i++) {
+                    setTimeout(() => {
+                        const sparkle = document.createElement('div');
+                        sparkle.className = 'image-sparkle-effect';
+                        
+                        // Vị trí ngẫu nhiên xung quanh ảnh
+                        const angle = Math.random() * 2 * Math.PI;
+                        const distance = 50 + Math.random() * 80; // Khoảng cách từ 50-130px từ center
+                        const x = Math.cos(angle) * distance;
+                        const y = Math.sin(angle) * distance;
+                        
+                        sparkle.style.left = `50%`;
+                        sparkle.style.top = `50%`;
+                        sparkle.style.transform = `translate(${x}px, ${y}px)`;
+                        sparkle.style.animationDelay = `${Math.random() * 2}s`;
+                        sparkle.style.animationDuration = `${2 + Math.random() * 2}s`; // 2-4s
+                        
+                        // Màu sắc ngẫu nhiên trong dải vàng
+                        const colors = ['#FFD700', '#FFA500', '#FFB347', '#FFDA44', '#F0E68C'];
+                        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                        sparkle.style.background = `radial-gradient(circle, ${randomColor} 0%, ${randomColor}80 50%, transparent 100%)`;
+                        
+                        container.appendChild(sparkle);
+                        
+                        // Tự động xóa sau khi animation kết thúc
+                        setTimeout(() => {
+                            if (sparkle.parentNode) {
+                                sparkle.parentNode.removeChild(sparkle);
+                            }
+                        }, 4000);
+                    }, i * 200); // Delay giữa các sparkle
+                }
+                
+                // Tạo thêm hiệu ứng continuous sparkles
+                const sparkleInterval = setInterval(() => {
+                    if (!container.parentNode) {
+                        clearInterval(sparkleInterval);
+                        return;
+                    }
+                    
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'image-sparkle-effect';
+                    
+                    const angle = Math.random() * 2 * Math.PI;
+                    const distance = 60 + Math.random() * 60;
+                    const x = Math.cos(angle) * distance;
+                    const y = Math.sin(angle) * distance;
+                    
+                    sparkle.style.left = `50%`;
+                    sparkle.style.top = `50%`;
+                    sparkle.style.transform = `translate(${x}px, ${y}px)`;
+                    sparkle.style.animationDuration = `${2.5 + Math.random() * 1.5}s`;
+                    
+                    const colors = ['#FFD700', '#FFA500', '#FFB347'];
+                    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                    sparkle.style.background = `radial-gradient(circle, ${randomColor} 0%, ${randomColor}80 50%, transparent 100%)`;
+                    
+                    container.appendChild(sparkle);
+                    
+                    setTimeout(() => {
+                        if (sparkle.parentNode) {
+                            sparkle.parentNode.removeChild(sparkle);
+                        }
+                    }, 4000);
+                }, 800); // Tạo sparkle mới mỗi 0.8s
+                
+                // Dừng tạo sparkle sau 10 giây
+                setTimeout(() => {
+                    clearInterval(sparkleInterval);
+                }, 10000);
+            }
+            
+            // Hàm tạo hiệu ứng đặc biệt cho giải đặc biệt
+            function createSpecialPrizeEffect() {
+                // Tạo hiệu ứng vàng rơi và lấp lánh đặc biệt
+                const modal = document.querySelector('.prize-modal-content');
+                if (!modal) return;
+                
+                // Tạo 30 hạt vàng rơi
+                for (let i = 0; i < 30; i++) {
+                    setTimeout(() => {
+                        const goldDrop = document.createElement('div');
+                        goldDrop.style.position = 'absolute';
+                        goldDrop.style.left = Math.random() * 100 + '%';
+                        goldDrop.style.top = '-20px';
+                        goldDrop.style.width = '12px';
+                        goldDrop.style.height = '12px';
+                        goldDrop.style.background = 'radial-gradient(circle, #FFD700 0%, #FFA500 70%, transparent 100%)';
+                        goldDrop.style.borderRadius = '50%';
+                        goldDrop.style.boxShadow = '0 0 10px #FFD700';
+                        goldDrop.style.zIndex = '10';
+                        goldDrop.style.animation = 'goldDropFall 3s linear infinite';
+                        goldDrop.style.animationDelay = Math.random() * 2 + 's';
+                        
+                        modal.appendChild(goldDrop);
+                        
+                        // Xóa sau 5 giây
+                        setTimeout(() => {
+                            if (goldDrop.parentNode) {
+                                goldDrop.parentNode.removeChild(goldDrop);
+                            }
+                        }, 5000);
+                    }, i * 100);
+                }
+                
+                // Tạo hiệu ứng nhấp nháy background
+                modal.style.animation = 'specialPrizeGlow 1s ease-in-out infinite alternate';
+                
+                // Dừng hiệu ứng nhấp nháy sau 10 giây
+                setTimeout(() => {
+                    modal.style.animation = '';
+                }, 10000);
+            }
+
+            function closePrizeModal() {
+                prizeModalOverlay.classList.remove('show');
+                
+                // Clear auto-close timer nếu có
+                if (window.autoCloseTimer) {
+                    clearTimeout(window.autoCloseTimer);
+                    window.autoCloseTimer = null;
+                }
+                
+                // Tự động đóng trò chơi lật thẻ sau khi người chơi nhận phần thưởng
+                // và đóng modal khoảng 1 giây
+                setTimeout(() => {
+                    // Gửi tin nhắn đóng trò chơi về cửa sổ cha
+                    if (window.parent && window.parent !== window) {
+                        // Nếu chưa gửi phần thưởng nào, gửi thông điệp đóng
+                        if (!window.prizeMessageSent) {
+                            try {
+                                window.prizeMessageSent = true;
+                                window.parent.postMessage({
+                                    type: 'cardGameCompleted',
+                                    reward: { type: 'close', value: 0 }
+                                }, '*');
+                            } catch (err) {
+                                console.error("Lỗi khi gửi tin nhắn đóng:", err);
+                            }
+                        }
+                        
+                        // Gửi sự kiện đóng iframe để quay lại game chính
+                        try {
+                            const closeEvent = new Event('closeIframe');
+                            window.dispatchEvent(closeEvent);
+                        } catch (err) {
+                            console.error("Lỗi khi gửi event closeIframe:", err);
+                        }
+                    }
+                }, 1000);
+            }
+
+            
+            // --- HIỆU ỨNG LẤP LÁNH XUNG QUANH ẢNH PHẦN THƯỞNG ---
+            function createSparkles(container) {
+                // Tạo 20 đốm sáng xung quanh ảnh
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        const sparkle = document.createElement('div');
+                        sparkle.className = 'prize-sparkle';
+                        sparkle.style.left = `${Math.random() * 100}%`;
+                        sparkle.style.top = `${Math.random() * 100}%`;
+                        sparkle.style.width = `${Math.random() * 10 + 5}px`;
+                        sparkle.style.height = sparkle.style.width;
+                        sparkle.style.animationDelay = `${Math.random() * 2}s`;
+                        container.appendChild(sparkle);
+                    }, i * 50);
+                }
+            }
+            prizeModalClose.addEventListener('click', closePrizeModal);
+                prizeModalOverlay.addEventListener('click', (event) => {
+                    if (event.target === prizeModalOverlay) {
+                        closePrizeModal();
+                    }
+                });
+            // --- HÀM KHỞI ĐỘNG LẠI GAME ---
+            function restartGame() {
+                moves = 0;
+                matchedPairs = 0;
+                isFirstFlip = true;
+                prizeAwarded = false;
+                hasExtraTurn = false;
+                extraTurnUsed = false;
+                window.prizeMessageSent = false;
+                movesCountSpan.textContent = moves;
+                winPopup.classList.remove('show');
+                closePrizeModal(); // Thêm dòng này
+
+                resetBoardState();
+
+                gameBoard.style.transition = 'transform 0.5s';
+                gameBoard.style.transform = 'scale(0.9)';
+
+                setTimeout(() => {
+                    createBoard();
+                    gameBoard.style.transform = 'scale(1)';
+                }, 500);
+            }
+
+            // --- KHỞI TẠO GAME LẦN ĐẦU ---
+
+            createBoard();
+            //showWinPopup();
+        });
+    </script>
+</body>
+
+</html>

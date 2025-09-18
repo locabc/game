@@ -46,6 +46,12 @@ const entityConfig = {
         type: 'SpecialEffect', mass: 3.6, bonus: 300, bonusType: 'High',
         effect: 'lucky_streak', streakCount: 3, spawnChance: 0.5
     },
+
+    // ✅ Gift Box - New special item with same size as NormalGold
+    'GiftBox': {
+        type: 'SpecialEffect', mass: 3.5, bonus: 150, bonusType: 'High',
+        effect: 'gift', spawnChance: 1
+    },
     
     // ✅ Boss Mole - appears every 5 levels
     'BossMole': {
@@ -55,44 +61,4 @@ const entityConfig = {
     }
 };
 
-// ✅ NEW: Skin Configuration
-const skinConfig = {
-    'miner_default': {
-        name: 'Thợ Mỏ Cổ Điển',
-        price: 0,
-        unlockLevel: 1,
-        spriteFrame: 0, // Frame 0 from miner_skins.png
-        description: 'Trang phục mặc định'
-    },
-    'miner_explorer': {
-        name: 'Nhà Thám Hiểm',
-        price: 2000,
-        unlockLevel: 5,
-        spriteFrame: 1,
-        description: 'Trang phục dành cho nhà thám hiểm'
-    },
-    'miner_professional': {
-        name: 'Thợ Mỏ Chuyên Nghiệp',
-        price: 5000,
-        unlockLevel: 10,
-        spriteFrame: 2,
-        description: 'Trang phục chuyên nghiệp'
-    },
-    'miner_advanced': {
-        name: 'Thợ Mỏ Cao Cấp',
-        price: 8000,
-        unlockLevel: 15,
-        spriteFrame: 3,
-        description: 'Trang phục cao cấp với công nghệ tiên tiến'
-    },
-    'miner_legendary': {
-        name: 'Thợ Mỏ Huyền Thoại',
-        price: 15000,
-        unlockLevel: 25,
-        spriteFrame: 4,
-        description: 'Trang phục huyền thoại cho những thợ mỏ xuất sắc'
-    }
-};
-
 export default entityConfig;
-export { skinConfig };

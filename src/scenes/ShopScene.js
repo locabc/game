@@ -202,7 +202,7 @@ export default class ShopScene extends Phaser.Scene {
         // Điều chỉnh dựa trên tiền tích lũy
         // Nếu người chơi giàu (moneyRatio > 1) thì giá tăng
         // Nếu người chơi nghèo (moneyRatio < 1) thì giá giảm
-        const wealthMultiplier = 0.5 + (moneyRatio * 1); // Range: 0.5 - 1.5
+        const wealthMultiplier = 0.5 + (moneyRatio * 1.5); // Range: 0.5 - 2.0
 
         return baseLevelMultiplier * wealthMultiplier;
     }

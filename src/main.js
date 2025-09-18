@@ -40,6 +40,7 @@ const config = {
     ]
 };
 
+
 const game = new Phaser.Game(config);
 
 // ✅ Audio Context Management for Mobile

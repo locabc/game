@@ -53,23 +53,5 @@
 <body>
     <div id="phaser-game"></div>
     <script type="module" src="src/main.js"></script>
-    
-    <!-- ✅ Service Worker for Audio Persistence -->
-    <script>
-        // Tạm thời disable SW để tránh lỗi fetch
-        /*
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then((registration) => {
-                        // SW registered
-                    })
-                    .catch((registrationError) => {
-                        // SW registration failed
-                    });
-            });
-        }
-        */
-    </script>
 </body>
 </html>

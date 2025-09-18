@@ -148,7 +148,7 @@ export default class TransitionScene extends Phaser.Scene {
                 break;
 
             case 'Victory':
-                mainTextContent = "Chúc mừng!\nBạn đã hoàn thành tất cả các cấp độ!";
+                mainTextContent = "\nChúc mừng!\nBạn đã hoàn thành tất cả các cấp độ!";
 
                 // ✅ Phát âm thanh chiến thắng
                 if (this.sound.get('MadeGoalMusic')) {

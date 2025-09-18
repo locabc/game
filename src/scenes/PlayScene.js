@@ -4,7 +4,7 @@ import Player from '../entities/Player.js';
 import Hook from '../entities/Hook.js';
 import { MapObject, MoveAroundMapObject, ExplosiveMapObject, RandomEffectMapObject, SpecialEffectMapObject, BossMoveAroundMapObject } from '../entities/MapObject.js';
 import entityConfig from '../utils/data/EntityConfig.js';
-import { levels } from '../utils/data/Levels.js';
+import { levels as originalLevels } from '../utils/data/Levels.js';
 import ShopScene from './ShopScene.js';
 
 export default class PlayScene extends Phaser.Scene {
@@ -23,8 +23,17 @@ export default class PlayScene extends Phaser.Scene {
         if (window.audioManager) {
             window.audioManager.forceResumeAudio();
         }
-
-        const levelData = levels[this.player.realLevelStr];
+        
+        // Use custom level if provided in URL and window.startLevel is set
+        let levelKey = this.player.realLevelStr;
+        if (window.startLevel && window.location.search.includes('editor=true')) {
+            levelKey = window.startLevel;
+        }
+        
+        // Use custom levels from editor if available
+        const levelsToUse = window.gameLevels || originalLevels;
+        
+        const levelData = levelsToUse[levelKey];
         if (!levelData) {
         // Quay về menu để tránh làm sập game
         this.scene.start('MenuScene');
@@ -72,6 +81,18 @@ export default class PlayScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-SPACE', () => {
             if (!this.isImageOpen) {
                 this.hook.startGrabbing();
+            }
+        }, this);
+        
+        // Thêm phím tắt 'N' để kết thúc ngay lập tức màn chơi
+        this.input.keyboard.on('keydown-N', () => {
+            if (!this.isImageOpen) {
+                // Đặt tiền của người chơi vượt qua mục tiêu để đảm bảo đạt được mục tiêu
+                this.player.money = this.player.goal + 1;
+                // Kết thúc ngay lập tức màn chơi
+                this.timeLeft = 0;
+                this.timeText.setText('Time: 0');
+                this.endLevel();
             }
         }, this);
         
@@ -149,9 +170,20 @@ export default class PlayScene extends Phaser.Scene {
 
     loadLevel(levelData) {
         if (!levelData) { return; }
+        
+        // Kiểm tra collision trước khi tải level
+        this.checkItemCollisions(levelData);
+        
+        // Đếm số lượng đối tượng theo loại
+        const entityCounts = {};
+        
         levelData.entities.forEach(e => {
             const config = entityConfig[e.type];
             if (!config) { return; }
+            
+            // Đếm loại đối tượng
+            entityCounts[e.type] = (entityCounts[e.type] || 0) + 1;
+            
             const x = e.pos.x;
             const y = e.pos.y;
             let obj;
@@ -190,6 +222,89 @@ export default class PlayScene extends Phaser.Scene {
         this.spawnBossIfNeeded();
     }
 
+    // Hàm kiểm tra collision giữa các vật phẩm
+    checkItemCollisions(levelData) {
+        const itemSizes = {
+            "BigGold": { width: 32, height: 29 },
+            "MiniGold": { width: 10, height: 8 },
+            "NormalGold": { width: 15, height: 13 },
+            "NormalGoldPlus": { width: 20, height: 18 },
+            "QuestionBag": { width: 20, height: 23 },
+            "BigRock": { width: 32, height: 28 },
+            "Skull": { width: 18, height: 17 },
+            "MiniRock": { width: 15, height: 11 },
+            "NormalRock": { width: 22, height: 19 },
+            "Diamond": { width: 10, height: 8 },
+            "Bone": { width: 20, height: 13 },
+            "TNT": { width: 20, height: 20 },
+            "Mole": { width: 24, height: 16 },
+            "MoleWithDiamond": { width: 24, height: 16 }
+        };
+
+        const collisions = [];
+        const entities = levelData.entities;
+
+        for (let i = 0; i < entities.length; i++) {
+            for (let j = i + 1; j < entities.length; j++) {
+                const item1 = entities[i];
+                const item2 = entities[j];
+                
+                const size1 = itemSizes[item1.type];
+                const size2 = itemSizes[item2.type];
+                
+                if (!size1 || !size2) continue;
+
+                // Tính toán bounding box
+                const box1 = {
+                    left: item1.pos.x - size1.width / 2,
+                    right: item1.pos.x + size1.width / 2,
+                    top: item1.pos.y - size1.height / 2,
+                    bottom: item1.pos.y + size1.height / 2
+                };
+
+                const box2 = {
+                    left: item2.pos.x - size2.width / 2,
+                    right: item2.pos.x + size2.width / 2,
+                    top: item2.pos.y - size2.height / 2,
+                    bottom: item2.pos.y + size2.height / 2
+                };
+
+                // Kiểm tra overlap
+                if (box1.left < box2.right && box1.right > box2.left &&
+                    box1.top < box2.bottom && box1.bottom > box2.top) {
+                    
+                    const distance = Math.sqrt(
+                        Math.pow(item1.pos.x - item2.pos.x, 2) + 
+                        Math.pow(item1.pos.y - item2.pos.y, 2)
+                    );
+                    
+                    collisions.push({
+                        item1: `${item1.type} (${item1.pos.x},${item1.pos.y})`,
+                        item2: `${item2.type} (${item2.pos.x},${item2.pos.y})`,
+                        distance: Math.round(distance)
+                    });
+                }
+            }
+        }
+
+        // Chỉ log nếu có collision
+        if (collisions.length > 0) {
+            const filteredCollisions = collisions.filter(collision => 
+                !collision.item1.includes('Mole') && 
+                !collision.item1.includes('MoleWithDiamond') && 
+                !collision.item2.includes('Mole') && 
+                !collision.item2.includes('MoleWithDiamond')
+            );
+
+            if (filteredCollisions.length > 0) {
+                console.warn(`⚠️ COLLISION DETECTED in ${this.player.realLevelStr}:`);
+                filteredCollisions.forEach(collision => {
+                    console.warn(`  🔴 ${collision.item1} ĐÈ LÊN ${collision.item2} (khoảng cách: ${collision.distance}px)`);
+                });
+            }
+        }
+    }
+
     spawnBossIfNeeded() {
         // Boss appears on level 5, 10, 15, 20, etc.
         if (this.player.level % 5 === 0) {
@@ -221,10 +336,37 @@ export default class PlayScene extends Phaser.Scene {
             }
         }
     }
-
+    spawnGiftBox() {
+        const config = entityConfig['GiftBox'];
+        if (config && Math.random() < config.spawnChance) {
+            // Vị trí GiftBox có thể điều chỉnh ở đây
+            // Đặt GiftBox ở vị trí cụ thể hoặc trong một khu vực xác định
+            
+            // Ví dụ: Đặt ở giữa màn hình, hơi thấp một chút
+            const x = Phaser.Math.Between(80, 280);
+            const y = 220;
+            
+            // Check if position is clear (not overlapping other items)
+            let positionClear = true;
+            this.mapObjects.getChildren().forEach(existing => {
+                if (Phaser.Math.Distance.Between(x, y, existing.x, existing.y) < 30) {
+                    positionClear = false;
+                }
+            });
+            
+            if (positionClear) {
+                const obj = new SpecialEffectMapObject(this, x, y, 'GiftBox');
+                obj.init(config);
+                this.mapObjects.add(obj);
+            }
+        }
+    }
     spawnRareItems() {
-        const rareItems = ['GoldenHook', 'TimeCrystal', 'MagnetStone', 'LuckyStar'];
+        //const rareItems = ['GoldenHook', 'TimeCrystal', 'MagnetStone', 'LuckyStar', 'GiftBox'];
+         this.spawnGiftBox();
         
+        // Xử lý các vật phẩm hiếm khác
+        const rareItems = ['GoldenHook', 'TimeCrystal', 'MagnetStone', 'LuckyStar'];
         rareItems.forEach(itemType => {
             const config = entityConfig[itemType];
             if (config && Math.random() < config.spawnChance) {
@@ -295,17 +437,42 @@ export default class PlayScene extends Phaser.Scene {
             
             // ✅ Lucky Star effect - guaranteed valuable items for next 3 grabs
             if (this.player.hasLuckyStar && this.player.luckyStreakCount > 0) {
-                if (entity.type.includes('Rock') || entity.config.bonus <= 100) {
+                // console.log('🍀 Lucky Star ACTIVE! Count:', this.player.luckyStreakCount);
+                // console.log('🍀 Entity info:', {
+                //     textureKey: entity.texture.key,
+                //     bonus: entity.config.bonus,
+                //     entityType: entity.constructor.name
+                // });
+                
+                const entityName = entity.texture.key;
+                let luckyBonus = 0;
+                
+                if (entityName.includes('Rock') || entity.config.bonus <= 100) {
                     // Convert low-value items to high-value
+                    const oldBonus = finalBonus;
                     finalBonus = Math.max(finalBonus, 300);
-                } else if (entity.type.includes('Gold') && entity.config.bonus > 100) {
+                    luckyBonus = finalBonus - oldBonus;
+                    // console.log('🍀 Rock/Low value bonus:', oldBonus, '→', finalBonus);
+                } else if (entityName.includes('Gold') && entity.config.bonus > 100) {
                     // Double gold value if > 100
+                    const oldBonus = finalBonus;
                     finalBonus *= 2;
+                    luckyBonus = finalBonus - oldBonus;
+                    // console.log('🍀 Gold bonus:', oldBonus, '→', finalBonus);
+                } else {
+                    // For other items, at least 50% bonus
+                    const oldBonus = finalBonus;
+                    finalBonus = Math.round(finalBonus * 1.5);
+                    luckyBonus = finalBonus - oldBonus;
+                    // console.log('🍀 Other item bonus:', oldBonus, '→', finalBonus);
                 }
+                
                 this.player.luckyStreakCount--;
+                // console.log('🍀 Lucky streak remaining:', this.player.luckyStreekCount);
                 
                 if (this.player.luckyStreakCount <= 0) {
                     this.player.hasLuckyStar = false;
+                    // console.log('🍀 Lucky Star EXPIRED!');
                     // Show streak end message
                     const text = this.add.text(this.cameras.main.centerX, 70, 'ĐÃ HẾT HIỆU LỰC!', {
                         fontFamily: 'Kurland',
@@ -398,8 +565,8 @@ export default class PlayScene extends Phaser.Scene {
     // ✅ Hàm kết thúc màn chơi
     endLevel() {
         if (this.player.reachGoal()) {
-            // ✅ Check if player completed final level (level 30)
-            if (this.player.level >= 30) {
+            // ✅ Check if player completed final level (level 100)
+            if (this.player.level >= 150 ) {
                 // Player wins the entire game!
                 this.scene.start('TransitionScene', { type: 'Victory', player: this.player });
             } else {
@@ -429,8 +596,8 @@ export default class PlayScene extends Phaser.Scene {
     createUI() {
         this.moneyText = this.add.text(10, 10, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
         this.goalText = this.add.text(10, 23, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '15', fill: '#815504ff' });
-        this.timeText = this.add.text(255, 10, 'Time:60', { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
-        this.levelText = this.add.text(255, 23, 'Level:' + this.player.level, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.timeText = this.add.text(250, 10, 'Time:60', { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.levelText = this.add.text(250, 23, 'Level:' + this.player.level, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
         this.dynamiteText = this.add.text(210, 23, 'x' + this.player.dynamiteCount, {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
         
         // Initialize shop status display

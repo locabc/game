@@ -331,6 +331,9 @@ export class SpecialEffectMapObject extends MapObject {
             case 'lucky_streak':
                 this.activateLuckyStreak(scene);
                 break;
+            case 'gift':
+                this.giftBoxMiniGame(scene);
+                break;
         }
         
         // Show special pickup effect
@@ -394,6 +397,95 @@ export class SpecialEffectMapObject extends MapObject {
             duration: 3000,
             onComplete: () => text.destroy()
         });
+    }
+
+    activateGift(scene) {
+        // Hiệu ứng khi nhận Gift Box
+        const effects = [
+            { text: '💰 Tiền x2!', action: () => { 
+                scene.player.money += scene.player.money * 0.5; 
+                scene.moneyText.setText('$' + scene.player.money);
+            }},
+            { text: '💣 +2 Thuốc Nổ!', action: () => { 
+                scene.player.dynamiteCount += 2;
+                scene.dynamiteText.setText('x' + scene.player.dynamiteCount);
+            }},
+            { text: '⏱️ +10 Giây!', action: () => { 
+                scene.timeLeft += 10;
+                scene.timeText.setText('Time: ' + scene.timeLeft);
+            }},
+            { text: '❄️ +1 Đóng Băng!', action: () => {
+                scene.player.hasTimeFreezeItem = (scene.player.hasTimeFreezeItem || 0) + 1;
+                scene.updatePlayerStats();
+            }}
+        ];
+        
+        // Chọn ngẫu nhiên một hiệu ứng
+        const randomEffect = Phaser.Math.RND.pick(effects);
+        
+        // Thực hiện hiệu ứng đã chọn
+        randomEffect.action();
+        
+        // Hiển thị thông báo
+        const text = scene.add.text(scene.cameras.main.centerX, 60, '🎁 ' + randomEffect.text, {
+            fontFamily: 'Kurland',
+            fontSize: '16px',
+            fill: '#FFD700',
+            stroke: '#000000',
+            strokeThickness: 2,
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        // Hiệu ứng cho text
+        scene.tweens.add({
+            targets: text,
+            scale: 1.2,
+            duration: 500,
+            yoyo: true,
+            repeat: 1,
+            onComplete: () => {
+                scene.tweens.add({
+                    targets: text,
+                    alpha: 0,
+                    y: 30,
+                    duration: 1500,
+                    onComplete: () => text.destroy()
+                });
+            }
+        });
+    }
+    
+    giftBoxMiniGame(scene) {
+        // Import hàm tạo trò chơi lật thẻ từ file GiftGame.js
+        import('../entities/GiftGame.js')
+            .then(module => {
+                // Gọi hàm tạo trò chơi lật thẻ
+                module.createGiftBoxMiniGame(scene);
+            })
+            .catch(error => {
+                console.error('Không thể tải module GiftGame:', error);
+                // Phần thưởng thay thế nếu không tải được module
+                scene.player.money += 100;
+                scene.moneyText.setText('$' + scene.player.money);
+                
+                // Hiện thông báo
+                const text = scene.add.text(scene.cameras.main.centerX, 60, '+100 Tiền!', {
+                    fontFamily: 'Arial',
+                    fontSize: '18px',
+                    fill: '#FFD700',
+                    stroke: '#000000',
+                    strokeThickness: 2
+                }).setOrigin(0.5);
+                
+                // Animation cho thông báo
+                scene.tweens.add({
+                    targets: text,
+                    alpha: 0,
+                    y: 30,
+                    duration: 2000,
+                    onComplete: () => text.destroy()
+                });
+            });
     }
 
     showPickupEffect(scene) {

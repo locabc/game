@@ -111,6 +111,11 @@ export default class MenuScene extends Phaser.Scene {
     selectOption() {
         const selected = this.options[this.selectedIndex];
         
+        // Check if we need to use a specific level from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const customLevel = urlParams.get('level');
+        const isEditorMode = urlParams.get('editor') === 'true';
+        
         if (selected.scene) {
             if (selected.action === 'newGame') {
                 // Start new game - reset everything
@@ -126,7 +131,15 @@ export default class MenuScene extends Phaser.Scene {
                 player.updateGoal();
                 
                 this.game.player = player;
-                this.scene.start(selected.scene, { type: 'NextGoal', player: player });
+                
+                // If we have a custom level from URL and in editor mode, go directly to PlayScene
+                if (customLevel && isEditorMode) {
+                    player.realLevelStr = customLevel;
+                    this.scene.start('PlayScene', { player: player });
+                } else {
+                    // Otherwise start normal game flow
+                    this.scene.start(selected.scene, { type: 'NextGoal', player: player });
+                }
                 
             } else if (selected.action === 'continue') {
                 // Continue from saved progress
@@ -143,7 +156,14 @@ export default class MenuScene extends Phaser.Scene {
                 }
                 
                 this.game.player = player;
-                this.scene.start(selected.scene, { type: 'NextGoal', player: player });
+                
+                // If we have a custom level from URL and in editor mode, override the level
+                if (customLevel && isEditorMode) {
+                    player.realLevelStr = customLevel;
+                    this.scene.start('PlayScene', { player: player });
+                } else {
+                    this.scene.start(selected.scene, { type: 'NextGoal', player: player });
+                }
                 
             } else {
                 // Handle other scenes like High Score
