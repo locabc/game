@@ -245,6 +245,12 @@
             width: 100%;
             transform: translateX(-25px); 
         }
+
+        @media (max-width: 767px) {
+            .gift-boxes-container {
+                transform: none;
+            }
+        }
         .gift-box {
             width: 120px;
             height: 120px;
@@ -800,11 +806,11 @@
                 padding: 20px 10px;
             }
 
-            .gift-boxes-container {
-                transform: translateX(25px); /* Remove horizontal shift */
+            .gift-boxes-container {               
                 width: 100%;     /* Use full width of popup content */
                 gap: 10px;
                 grid-template-columns: repeat(3, 1fr); /* Ensure it stays 3 columns */          
+                margin-bottom: 7px;
             }
 
             .gift-box {
@@ -865,7 +871,7 @@
 
             .gift-boxes-container {
                 margin-top: 5px;
-                gap: 8px;
+                gap: 8px;              
             }
             
             .gift-box {
@@ -1628,8 +1634,8 @@
 
             // --- KHỞI TẠO GAME LẦN ĐẦU ---
 
-            createBoard();
-            //showWinPopup();
+            //createBoard();
+            showWinPopup();
         });
     </script>
 </body>
