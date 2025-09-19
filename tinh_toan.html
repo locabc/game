@@ -118,18 +118,6 @@
             20%, 60% { transform: translateX(-10px); }
             40%, 80% { transform: translateX(10px); }
         }
-        
-        @keyframes fadeInScale {
-            from { 
-                opacity: 0; 
-                transform: translate(-50%, -50%) scale(0.5); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translate(-50%, -50%) scale(1); 
-            }
-        }
-        
         /* Tối ưu cho giao diện landscape trên mobile */
         @media (orientation: landscape) and (max-height: 500px) {
             body {
@@ -183,6 +171,7 @@
 <body>
     <audio id="correctSound" src="audios/correct.mp3" preload="auto"></audio>
     <audio id="wrongSound" src="audios/wrong.mp3" preload="auto"></audio>
+    <audio id="silentAudio" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"></audio>
     <div class="container">
         <h1>Game Tính Toán</h1>
         <div id="quiz-container">
@@ -204,7 +193,8 @@
         const resultElement = document.getElementById('result');
         const correctSound = document.getElementById('correctSound');
         const wrongSound = document.getElementById('wrongSound');
-
+        let isAudioUnlocked = false;
+        const silentAudio = document.getElementById('silentAudio');
         let questions = [];
         let currentQuestionIndex = 0;
         let correctAnswers = 0; // Đếm số câu trả lời đúng
@@ -235,7 +225,13 @@
                 console.error("Lỗi khi phát âm thanh:", error);
             }
         }
-
+        // Hàm này chỉ chạy MỘT LẦN DUY NHẤT sau lần tương tác đầu tiên
+        function unlockAndLoopSilentAudio() {
+            if (isAudioUnlocked) return;
+            // Chạy âm thanh im lặng và lặp lại
+            silentAudio.play().catch(e => console.error("Không thể phát âm thanh im lặng:", e));
+            isAudioUnlocked = true;
+        }
         function playCorrectSound() {
             playSound(correctSound);
         }
@@ -383,7 +379,7 @@
             clearInterval(timer);
             const selectedButton = e.target;
             const correct = selectedButton.dataset.correct === 'true';
-
+            unlockAndLoopSilentAudio();
             if (correct) {
                 selectedButton.classList.add('correct');
                 resultElement.textContent = 'Chính xác! 🎉';
@@ -466,48 +462,6 @@
             };
             answerButtonsElement.appendChild(backButton);
         }
-        
-        // Lắng nghe message từ parent window để hiển thị phần thưởng
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'showReward') {
-                const reward = event.data.reward;
-                
-                // Tạo div hiển thị phần thưởng
-                const rewardDiv = document.createElement('div');
-                rewardDiv.style.position = 'fixed';
-                rewardDiv.style.top = '50%';
-                rewardDiv.style.left = '50%';
-                rewardDiv.style.transform = 'translate(-50%, -50%)';
-                rewardDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
-                rewardDiv.style.color = '#FFD700';
-                rewardDiv.style.padding = '30px';
-                rewardDiv.style.borderRadius = '15px';
-                rewardDiv.style.textAlign = 'center';
-                rewardDiv.style.zIndex = '10000';
-                rewardDiv.style.fontSize = '20px';
-                rewardDiv.style.fontWeight = 'bold';
-                rewardDiv.style.border = '3px solid #FFD700';
-                rewardDiv.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.5)';
-                
-                // Thêm hiệu ứng animation
-                rewardDiv.style.animation = 'fadeInScale 0.5s ease-out';
-                
-                rewardDiv.innerHTML = `
-                    <div style="margin-bottom: 20px; font-size: 24px;">🎉 PHẦN THƯỞNG! 🎉</div>
-                    <div style="white-space: pre-line; line-height: 1.6;">${reward.text}</div>
-                    <div style="margin-top: 20px; font-size: 16px; color: #FFA500;">Tự động đóng sau 5 giây...</div>
-                `;
-                
-                document.body.appendChild(rewardDiv);
-                
-                // Tự động xóa sau 5 giây
-                setTimeout(() => {
-                    if (document.body.contains(rewardDiv)) {
-                        document.body.removeChild(rewardDiv);
-                    }
-                }, 5000);
-            }
-        });
 
         window.onload = startMathGame;
     </script>

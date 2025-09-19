@@ -609,6 +609,27 @@ export default class PlayScene extends Phaser.Scene {
         this.levelText = this.add.text(250, 23, 'Level:' + this.player.level, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
         this.dynamiteText = this.add.text(210, 23, 'x' + this.player.dynamiteCount, {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
         
+        // ❄️ Tạo Time Freeze UI giống như thuốc nổ - luôn hiển thị
+        this.timeFreezeIcon = this.add.text(80, 20, '❄️', {
+            fontFamily: 'Arial',
+            fontSize: '13px'
+        }).setInteractive({ 
+            useHandCursor: true,
+            hitArea: new Phaser.Geom.Rectangle(-5, -5, 25, 25),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains
+        });
+
+        this.timeFreezeIcon.on('pointerdown', (pointer, localX, localY, event) => {
+            event.stopPropagation(); 
+            this.activateTimeFreeze();
+        });
+
+        this.timeFreezeText = this.add.text(100, 25, 'x' + (this.player.hasTimeFreezeItem || 0), {
+            fontFamily: 'visitor1',
+            fontSize: '15px',
+            fill: '#815504ff'
+        });
+        
         // Initialize shop status display
         this.updatePlayerStats();
         
@@ -619,51 +640,27 @@ export default class PlayScene extends Phaser.Scene {
     // Helper method to update UI when returning from shop
     // Gọi hàm này mỗi khi muốn cập nhật UI (sau shop, sau khi mua item, sau khi dùng item...)
 updatePlayerStats() {
-    // Cập nhật tiền và dynamite
+    // Update money and goal displays
     this.moneyText.setText('$' + this.player.money);
+    this.goalText.setText('Goal: $' + this.player.goal);
     this.dynamiteText.setText('x' + this.player.dynamiteCount);
 
-    // Quản lý UI Time Freeze
-    if (this.player.hasTimeFreezeItem && this.player.hasTimeFreezeItem > 0) {
-        // Nếu chưa có icon thì tạo
-        if (!this.timeFreezeIcon) {
-            this.timeFreezeIcon = this.add.text(80, 20, '❄️', {
-                fontFamily: 'Arial',
-                fontSize: '13px'
-            }).setInteractive({ 
-                useHandCursor: true,
-                hitArea: new Phaser.Geom.Rectangle(-5, -5, 25, 25),
-                hitAreaCallback: Phaser.Geom.Rectangle.Contains
-            });
-
-            this.timeFreezeIcon.on('pointerdown', (pointer, localX, localY, event) => {
-                event.stopPropagation(); 
-                this.activateTimeFreeze();
-            });
+    // ❄️ Cập nhật Time Freeze UI - giống như thuốc nổ (chỉ cập nhật text, không tạo mới)
+    if (this.timeFreezeText) {
+        this.timeFreezeText.setText('x' + (this.player.hasTimeFreezeItem || 0));
+        
+        // Thay đổi opacity dựa trên có item hay không
+        if (this.player.hasTimeFreezeItem > 0) {
+            this.timeFreezeIcon.setAlpha(1.0); // Đậm khi có item
+            this.timeFreezeText.setAlpha(1.0);
         } else {
-            this.timeFreezeIcon.setVisible(true);
+            this.timeFreezeIcon.setAlpha(0.5); // Mờ khi hết item
+            this.timeFreezeText.setAlpha(0.5);
         }
-
-        // Nếu chưa có text số lượng thì tạo
-        if (!this.timeFreezeText) {
-            this.timeFreezeText = this.add.text(100, 25, 'x' + this.player.hasTimeFreezeItem, {
-                fontFamily: 'visitor1',
-                fontSize: '15px',
-                fill: '#815504ff'
-            });
-        } else {
-            this.timeFreezeText.setText('x' + this.player.hasTimeFreezeItem);
-            this.timeFreezeText.setVisible(true);
-        }
-    } else {
-        // Nếu không có item thì ẩn icon + text
-        if (this.timeFreezeIcon) this.timeFreezeIcon.setVisible(false);
-        if (this.timeFreezeText) this.timeFreezeText.setVisible(false);
     }
 }
 
-
-   activateTimeFreeze() {
+    activateTimeFreeze() {
     // Kiểm tra có item không
     if (!this.player.hasTimeFreezeItem || this.player.hasTimeFreezeItem <= 0) {
         return;
@@ -836,8 +833,10 @@ createFullscreenToggleButton() {
         }
     });
     
-    // Toggle fullscreen when clicked (with delay protection)
-    toggleButton.on('pointerdown', () => {
+    // Mobile touch support - show tooltip on touch start
+    toggleButton.on('pointerdown', (pointer, localX, localY, event) => {
+        // Prevent event propagation to avoid interfering with game
+        event.stopPropagation();
         const currentTime = Date.now();
         
         // Check if enough time has passed since last click
@@ -846,7 +845,7 @@ createFullscreenToggleButton() {
         }
         
         lastClickTime = currentTime;
-        
+        toggleButton.setFillStyle(0x555555, 0.9);
         const isFullscreen = !!(document.fullscreenElement || 
                                 document.webkitFullscreenElement || 
                                 document.msFullscreenElement || 
@@ -858,6 +857,29 @@ createFullscreenToggleButton() {
             this.enterFullscreen();
         }
         
+        if (tooltip) {
+            tooltip.setVisible(false);
+        }
+        // Reset button appearance after short delay
+        this.time.delayedCall(150, () => {
+            if (toggleButton && toggleButton.active) {
+                toggleButton.setFillStyle(0x333333, 0.8);
+            }
+        });
+    });
+    
+    // Additional mobile-specific events
+    toggleButton.on('pointerup', () => {
+        // Ensure button returns to normal state on touch end
+        toggleButton.setFillStyle(0x333333, 0.8);
+        if (tooltip) {
+            tooltip.setVisible(false);
+        }
+    });
+    
+    // Handle touch cancel (when user drags finger away)
+    toggleButton.on('pointerupoutside', () => {
+        toggleButton.setFillStyle(0x333333, 0.8);
         if (tooltip) {
             tooltip.setVisible(false);
         }

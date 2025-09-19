@@ -77,26 +77,29 @@ export function createGiftBoxMiniGame(scene) {
             let rewardDynamite = 0;
             let rewardFreeze = 0;
             
-            if (correctAnswers >= 2) {
-                rewardMoney = 1000;
-                rewardText = `🎯 Trả lời đúng ${correctAnswers}/5 câu!\n💰 +${rewardMoney} GOLD`;
-            }
-            if (correctAnswers >= 3) {
-                rewardMoney = 2000;
-                rewardDynamite = 2;
-                rewardText = `🎯 Trả lời đúng ${correctAnswers}/5 câu!\n💰 +${rewardMoney} GOLD\n💣 +${rewardDynamite} Thuốc nổ`;
-            }
-            if (correctAnswers >= 4) {
-                rewardMoney = 3000;
-                rewardDynamite = 0;
-                rewardFreeze = 3;
-                rewardText = `🎯 Trả lời đúng ${correctAnswers}/5 câu!\n💰 +${rewardMoney} GOLD\n❄️ +${rewardFreeze} Đóng băng`;
-            }
             if (correctAnswers === 5) {
+                // 🎉 Hoàn hảo - 5/5 câu
                 rewardMoney = 5000;
                 rewardDynamite = 4;
                 rewardFreeze = 4;
-                rewardText = `🎉 XUẤT SẮC! Trả lời đúng 5/5 câu!\n💰 +${rewardMoney} GOLD\n💣 +${rewardDynamite} Thuốc nổ\n❄️ +${rewardFreeze} Đóng băng`;
+                rewardText = `� XUẤT SẮC! Trả lời đúng 5/5 câu!\n💰 +${rewardMoney} GOLD\n💣 +${rewardDynamite} Thuốc nổ\n❄️ +${rewardFreeze} Đóng băng`;
+            } else if (correctAnswers === 4) {
+                // ❄️ Tốt - 4/5 câu: Gold + Đóng băng
+                rewardMoney = 3000;
+                rewardFreeze = 3;
+                rewardText = `🎯 Trả lời đúng ${correctAnswers}/5 câu!\n💰 +${rewardMoney} GOLD\n❄️ +${rewardFreeze} Đóng băng`;
+            } else if (correctAnswers === 3) {
+                // 💣 Khá - 3/5 câu: Gold + Thuốc nổ
+                rewardMoney = 2000;
+                rewardDynamite = 2;
+                rewardText = `🎯 Trả lời đúng ${correctAnswers}/5 câu!\n💰 +${rewardMoney} GOLD\n💣 +${rewardDynamite} Thuốc nổ`;
+            } else if (correctAnswers === 2) {
+                // 💰 Đạt - 2/5 câu: Chỉ Gold
+                rewardMoney = 1000;
+                rewardText = `� Trả lời đúng ${correctAnswers}/5 câu!\n💰 +${rewardMoney} GOLD`;
+            } else {
+                // 😢 Chưa đạt - 0-1 câu: Không có gì
+                rewardText = `😢 Trả lời đúng ${correctAnswers}/5 câu!\n🎯 Cần tối thiểu 2 câu đúng để nhận phần thưởng`;
             }
             
             // Áp dụng phần thưởng
@@ -105,14 +108,15 @@ export function createGiftBoxMiniGame(scene) {
                 scene.moneyText.setText('$' + scene.player.money);
             }
             if (rewardDynamite > 0) {
-                scene.player.dynamiteCount = (scene.player.dynamiteCount || 0) + rewardDynamite;
-                scene.player.hasDynamiteItem = (scene.player.hasDynamiteItem || 0) + rewardDynamite;
+                // Sử dụng addDynamite để đảm bảo consistency
+                scene.player.addDynamite(rewardDynamite);
             }
             if (rewardFreeze > 0) {
-                scene.player.hasTimeFreezeItem = (scene.player.hasTimeFreezeItem || 0) + rewardFreeze;
+                // Sử dụng addTimeFreezeItem để đảm bảo consistency
+                scene.player.addTimeFreezeItem(rewardFreeze);
             }
             
-            // Lưu tiến trình sau khi nhận phần thưởng
+            // QUAN TRỌNG: Lưu tiến trình ngay lập tức sau khi nhận phần thưởng
             if (scene.player.saveProgress) {
                 scene.player.saveProgress();
             }
@@ -235,8 +239,14 @@ export function createGiftBoxMiniGame(scene) {
                         break;
                         
                     case 'dynamite':
-                        scene.player.hasDynamiteItem = (scene.player.hasDynamiteItem || 0) + reward.value;
+                        // Sử dụng addDynamite để đảm bảo consistency
+                        scene.player.addDynamite(reward.value);
                         if (scene.updatePlayerStats) scene.updatePlayerStats();
+                        
+                        // Lưu progress ngay sau khi nhận dynamite
+                        if (scene.player.saveProgress) {
+                            scene.player.saveProgress();
+                        }
                         
                         // Hiển thị thông báo
                         const dynamiteText = scene.add.text(scene.cameras.main.centerX, 60, `💣 +${reward.value} Thuốc Nổ`, {
@@ -279,8 +289,14 @@ export function createGiftBoxMiniGame(scene) {
                         break;
                         
                     case 'freeze':
-                        scene.player.hasTimeFreezeItem = (scene.player.hasTimeFreezeItem || 0) + reward.value;
+                        // Sử dụng addTimeFreezeItem để đảm bảo consistency
+                        scene.player.addTimeFreezeItem(reward.value);
                         if (scene.updatePlayerStats) scene.updatePlayerStats();
+                        
+                        // Lưu progress ngay sau khi nhận freeze
+                        if (scene.player.saveProgress) {
+                            scene.player.saveProgress();
+                        }
                         
                         // Hiển thị thông báo
                         const freezeText = scene.add.text(scene.cameras.main.centerX, 60, `❄️ +${reward.value} Đóng Băng`, {
@@ -460,20 +476,36 @@ export function createGiftBoxMiniGame(scene) {
     
     // Xử lý sự kiện đóng game
     htmlCloseButton.addEventListener('click', function() {
-        // Xóa iframe và button khỏi DOM
-        document.body.removeChild(iframeElement);
-        document.body.removeChild(htmlCloseButton);
-        
-        // Tiếp tục trò chơi chính
-        if (scene.timerEvent) scene.timerEvent.paused = false;
-        scene.isImageOpen = false;
-        
-        // Remove the message event listener
-        window.removeEventListener('message', messageHandler);
-        
-        // Thêm phần thưởng nhỏ khi đóng sớm
-        scene.player.money += 50;
-        scene.moneyText.setText('$' + scene.player.money);
+        try {
+            // Xóa iframe và button khỏi DOM
+            if (iframeElement.parentNode) {
+                document.body.removeChild(iframeElement);
+            }
+            if (htmlCloseButton.parentNode) {
+                document.body.removeChild(htmlCloseButton);
+            }
+            
+            // Remove the message event listener
+            window.removeEventListener('message', messageHandler);
+            
+            // Tiếp tục trò chơi chính
+            if (scene.timerEvent) scene.timerEvent.paused = false;
+            scene.isImageOpen = false;
+            
+            // QUAN TRỌNG: Xóa overlay để tắt hiệu ứng tối màn hình
+            if (window.currentGameOverlay) {
+                window.currentGameOverlay.destroy();
+                window.currentGameOverlay = null;
+            }
+            
+            // Thêm phần thưởng nhỏ khi đóng sớm
+            scene.player.money += 50;
+            scene.moneyText.setText('$' + scene.player.money);
+            
+            // Lưu progress sau khi thêm tiền
+            if (scene.player.saveProgress) {
+                scene.player.saveProgress();
+            }
         
         // Hiển thị thông báo
         const smallReward = scene.add.text(scene.cameras.main.centerX, 60, "💰 +50 Tiền", {
@@ -497,6 +529,16 @@ export function createGiftBoxMiniGame(scene) {
         if (window.currentGameOverlay) {
             window.currentGameOverlay.destroy();
             window.currentGameOverlay = null;
+        }
+        } catch (error) {
+            console.warn('⚠️ Error closing gift game:', error);
+            // Vẫn cố gắng khôi phục game state
+            if (scene.timerEvent) scene.timerEvent.paused = false;
+            scene.isImageOpen = false;
+            if (window.currentGameOverlay) {
+                window.currentGameOverlay.destroy();
+                window.currentGameOverlay = null;
+            }
         }
     });
     

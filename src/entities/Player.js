@@ -9,6 +9,9 @@ export default class Player {
         this.levelIndex = -1;
         this.strength = 1;
         this.dynamiteCount = 0;
+        
+        // ✅ Time freeze items
+        this.hasTimeFreezeItem = 0;
 
         this.hasStrengthDrink = false;
         this.hasLuckyClover = false;
@@ -280,12 +283,17 @@ export default class Player {
         this.dynamiteCount = Math.min(this.dynamiteCount + amount, 12);
     }
 
+    addTimeFreezeItem(amount = 1) {
+        this.hasTimeFreezeItem = Math.min(this.hasTimeFreezeItem + amount, 12);
+    }
+
     // ✅ GAME PROGRESS: Save current progress to localStorage
     saveProgress() {
         const progress = {
             level: this.level,
             money: this._money,
             dynamiteCount: this.dynamiteCount,
+            hasTimeFreezeItem: this.hasTimeFreezeItem,
             goal: this.goal,
             realLevelStr: this.realLevelStr,
             strength: this.strength, // ✅ Save strength value
@@ -319,6 +327,7 @@ export default class Player {
             this.level = progress.level || 1;
             this._money = progress.money || 0;
             this.dynamiteCount = progress.dynamiteCount || 0;
+            this.hasTimeFreezeItem = progress.hasTimeFreezeItem || 0;
             this.goal = progress.goal || 1600;
             this.realLevelStr = progress.realLevelStr || 'L1_1';
             this.strength = progress.strength || 1; // ✅ Restore strength value
