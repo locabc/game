@@ -55,7 +55,7 @@ export default class Player {
             } else {
                 // Từ lv101-150: goal tăng từ 20000 -> 30000
                 let minInc = 7000;
-                let maxInc = 9000;
+                let maxInc = 11000;
                 let steps = 150 - 100; // 50 bước
                 let stepInc = (maxInc - minInc) / steps;
                 increment = Math.round(minInc + (this.level - 100) * stepInc);

@@ -591,6 +591,15 @@ export default class PlayScene extends Phaser.Scene {
             this.timerEvent.destroy();
             this.timerEvent = null;
         }
+        
+        // Cleanup fullscreen event listeners
+        if (this.fullscreenChangeHandler) {
+            document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+            document.removeEventListener('webkitfullscreenchange', this.fullscreenChangeHandler);
+            document.removeEventListener('msfullscreenchange', this.fullscreenChangeHandler);
+            document.removeEventListener('mozfullscreenchange', this.fullscreenChangeHandler);
+            this.fullscreenChangeHandler = null;
+        }
     }
 
     createUI() {
@@ -602,6 +611,9 @@ export default class PlayScene extends Phaser.Scene {
         
         // Initialize shop status display
         this.updatePlayerStats();
+        
+        // Add fullscreen toggle button (always visible)
+        this.createFullscreenToggleButton();
     }
 
     // Helper method to update UI when returning from shop
@@ -748,4 +760,140 @@ deactivateTimeFreeze() {
         onComplete: () => unfreezeMessage.destroy()
     });
 }
+
+createFullscreenToggleButton() {
+    // Create toggle fullscreen button (small, top-right corner)
+    const toggleButton = this.add.rectangle(this.cameras.main.width - 7, 5, 11, 9, 0x333333, 0.8)
+        .setStrokeStyle(1, 0x666666)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0) // Keep button fixed on screen
+        .setDepth(999);
+    
+    const toggleText = this.add.text(this.cameras.main.width - 7, 4, '⛶', {
+        fontFamily: 'Arial',
+        fontSize: '10px',
+        fill: '#23d650ff'
+    }).setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(1000);
+    
+    // Tooltip
+    let tooltip = null;
+    
+    // Add delay mechanism (1 second cooldown)
+    let lastClickTime = 0;
+    const clickDelay = 1000; // 1 second delay
+    
+    // Update button icon and tooltip based on fullscreen state
+    const updateToggleButton = () => {
+        const isFullscreen = !!(document.fullscreenElement || 
+                                document.webkitFullscreenElement || 
+                                document.msFullscreenElement || 
+                                document.mozFullScreenElement);
+        
+        if (isFullscreen) {
+            // In fullscreen - show exit icon and tooltip
+            toggleText.setText('✕');
+            if (tooltip) {
+                tooltip.setText('Exit Fullscreen');
+            }
+        } else {
+            // Not in fullscreen - show fullscreen icon and tooltip
+            toggleText.setText('⛶');
+            if (tooltip) {
+                tooltip.setText('Fullscreen');
+            }
+        }
+    };
+    
+    // Initial button state
+    updateToggleButton();
+    
+    // Listen for fullscreen changes
+    const fullscreenChangeHandler = () => {
+        updateToggleButton();
+    };
+    
+    document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+    document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+    document.addEventListener('msfullscreenchange', fullscreenChangeHandler);
+    document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
+    
+    // Button hover effects
+    toggleButton.on('pointerover', () => {
+        toggleButton.setFillStyle(0x555555, 0.9);
+        this.game.canvas.style.cursor = 'pointer';
+        if (tooltip) {
+            tooltip.setVisible(true);
+        }
+    });
+    
+    toggleButton.on('pointerout', () => {
+        toggleButton.setFillStyle(0x333333, 0.8);
+        this.game.canvas.style.cursor = 'default';
+        if (tooltip) {
+            tooltip.setVisible(false);
+        }
+    });
+    
+    // Toggle fullscreen when clicked (with delay protection)
+    toggleButton.on('pointerdown', () => {
+        const currentTime = Date.now();
+        
+        // Check if enough time has passed since last click
+        if (currentTime - lastClickTime < clickDelay) {
+            return; // Ignore click if within delay period
+        }
+        
+        lastClickTime = currentTime;
+        
+        const isFullscreen = !!(document.fullscreenElement || 
+                                document.webkitFullscreenElement || 
+                                document.msFullscreenElement || 
+                                document.mozFullScreenElement);
+        
+        if (isFullscreen) {
+            this.exitFullscreen();
+        } else {
+            this.enterFullscreen();
+        }
+        
+        if (tooltip) {
+            tooltip.setVisible(false);
+        }
+    });
+    
+    // Store references for cleanup
+    this.fullscreenToggleButton = toggleButton;
+    this.fullscreenToggleText = toggleText;
+    this.fullscreenTooltip = tooltip;
+    this.fullscreenChangeHandler = fullscreenChangeHandler;
+}
+
+enterFullscreen() {
+    const element = document.documentElement;
+    
+    if (element.requestFullscreen) {
+        element.requestFullscreen();
+    } else if (element.webkitRequestFullscreen) { /* Safari */
+        element.webkitRequestFullscreen();
+    } else if (element.msRequestFullscreen) { /* IE11 */
+        element.msRequestFullscreen();
+    } else if (element.mozRequestFullScreen) { /* Firefox */
+        element.mozRequestFullScreen();
+    }
+}
+
+exitFullscreen() {
+    if (document.exitFullscreen) {
+        document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) { /* Safari */
+        document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) { /* IE11 */
+        document.msExitFullscreen();
+    } else if (document.mozCancelFullScreen) { /* Firefox */
+        document.mozCancelFullScreen();
+    }
+}
+
 }

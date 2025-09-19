@@ -105,32 +105,40 @@ export function createGiftBoxMiniGame(scene) {
                 scene.moneyText.setText('$' + scene.player.money);
             }
             if (rewardDynamite > 0) {
+                scene.player.dynamiteCount = (scene.player.dynamiteCount || 0) + rewardDynamite;
                 scene.player.hasDynamiteItem = (scene.player.hasDynamiteItem || 0) + rewardDynamite;
             }
             if (rewardFreeze > 0) {
                 scene.player.hasTimeFreezeItem = (scene.player.hasTimeFreezeItem || 0) + rewardFreeze;
             }
             
+            // Lưu tiến trình sau khi nhận phần thưởng
+            if (scene.player.saveProgress) {
+                scene.player.saveProgress();
+            }
+            
             // Cập nhật UI
             if (scene.updatePlayerStats) scene.updatePlayerStats();
             
-            // Hiển thị thông báo phần thưởng
-            const quizRewardText = scene.add.text(scene.cameras.main.centerX, 60, rewardText, {
-                fontFamily: 'Arial',
-                fontSize: '16px',
-                fill: '#FFD700',
-                stroke: '#000000',
-                strokeThickness: 2,
-                align: 'center'
-            }).setOrigin(0.5);
-            
-            scene.tweens.add({
-                targets: quizRewardText,
-                alpha: 0,
-                y: 30,
-                duration: 4000,
-                onComplete: () => quizRewardText.destroy()
-            });
+            // Gửi thông báo phần thưởng về game quiz để hiển thị
+            if (window.frames.length > 0) {
+                try {
+                    const iframe = document.querySelector('iframe');
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage({
+                            type: 'showReward',
+                            reward: {
+                                text: rewardText,
+                                money: rewardMoney,
+                                dynamite: rewardDynamite,
+                                freeze: rewardFreeze
+                            }
+                        }, '*');
+                    }
+                } catch (error) {
+                    console.warn('Could not send reward message to iframe:', error);
+                }
+            }
             
             // Đóng iframe sau khi hiển thị thông báo
             setTimeout(() => {
@@ -158,7 +166,7 @@ export function createGiftBoxMiniGame(scene) {
                 } catch (error) {
                     console.warn('⚠️ Quiz cleanup warning:', error);
                 }
-            }, 3000);
+            }, 5000); // Tăng từ 3000 lên 5000ms
             
             return;
         }

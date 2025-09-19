@@ -120,6 +120,17 @@
             20%, 60% { transform: translateX(-10px); }
             40%, 80% { transform: translateX(10px); }
         }
+        
+        @keyframes fadeInScale {
+            from { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(0.5); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translate(-50%, -50%) scale(1); 
+            }
+        }
 
         /* Tối ưu cho giao diện landscape trên mobile */
         @media (orientation: landscape) and (max-height: 500px) {
@@ -211,14 +222,27 @@
             }
         }
         
+        // ✨ [BẮT ĐẦU SỬA LỖI] Cải thiện hàm phát âm thanh
+        async function playSound(soundElement) {
+            try {
+                // Dừng hẳn âm thanh đang phát (nếu có)
+                soundElement.pause();
+                // Tua về đầu để sẵn sàng phát lại ngay lập tức
+                soundElement.currentTime = 0;
+                // Lệnh play() trả về một Promise, chúng ta cần đợi nó hoàn thành
+                await soundElement.play();
+            } catch (error) {
+                // Ghi lại lỗi nếu trình duyệt chặn phát âm thanh
+                console.error("Lỗi khi phát âm thanh:", error);
+            }
+        }
+
         function playCorrectSound() {
-            correctSound.currentTime = 0;
-            correctSound.play();
+            playSound(correctSound);
         }
 
         function playWrongSound() {
-            wrongSound.currentTime = 0;
-            wrongSound.play();
+            playSound(wrongSound);
         }
 
         // --- Logic cho Game Đố Vui ---
@@ -396,6 +420,48 @@
             answerButtonsElement.appendChild(backButton);
         }
         
+        // Lắng nghe message từ parent window để hiển thị phần thưởng
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'showReward') {
+                const reward = event.data.reward;
+                
+                // Tạo div hiển thị phần thưởng
+                const rewardDiv = document.createElement('div');
+                rewardDiv.style.position = 'fixed';
+                rewardDiv.style.top = '50%';
+                rewardDiv.style.left = '50%';
+                rewardDiv.style.transform = 'translate(-50%, -50%)';
+                rewardDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+                rewardDiv.style.color = '#FFD700';
+                rewardDiv.style.padding = '30px';
+                rewardDiv.style.borderRadius = '15px';
+                rewardDiv.style.textAlign = 'center';
+                rewardDiv.style.zIndex = '10000';
+                rewardDiv.style.fontSize = '20px';
+                rewardDiv.style.fontWeight = 'bold';
+                rewardDiv.style.border = '3px solid #FFD700';
+                rewardDiv.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.5)';
+                
+                // Thêm hiệu ứng animation
+                rewardDiv.style.animation = 'fadeInScale 0.5s ease-out';
+                
+                rewardDiv.innerHTML = `
+                    <div style="margin-bottom: 20px; font-size: 24px;">🎉 PHẦN THƯỞNG! 🎉</div>
+                    <div style="white-space: pre-line; line-height: 1.6;">${reward.text}</div>
+                    <div style="margin-top: 20px; font-size: 16px; color: #FFA500;">Tự động đóng sau 5 giây...</div>
+                `;
+                
+                document.body.appendChild(rewardDiv);
+                
+                // Tự động xóa sau 5 giây
+                setTimeout(() => {
+                    if (document.body.contains(rewardDiv)) {
+                        document.body.removeChild(rewardDiv);
+                    }
+                }, 5000);
+            }
+        });
+
         window.onload = loadRiddlesGame;
     </script>
 </body>
