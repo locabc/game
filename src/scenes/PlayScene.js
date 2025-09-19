@@ -608,11 +608,7 @@ export default class PlayScene extends Phaser.Scene {
         this.timeText = this.add.text(250, 10, 'Time:60', { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
         this.levelText = this.add.text(250, 23, 'Level:' + this.player.level, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
         this.dynamiteText = this.add.text(210, 23, 'x' + this.player.dynamiteCount, {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
-        
-        // ❄️ Tạo Time Freeze UI giống như thuốc nổ - luôn hiển thị
-        this.timeFreezeIcon = this.add.text(80, 20, '❄️', {
-            fontFamily: 'Arial',
-            fontSize: '13px'
+        this.timeFreezeIcon = this.add.text(80, 20, '❄️', {fontFamily: 'Arial',fontSize: '13px'
         }).setInteractive({ 
             useHandCursor: true,
             hitArea: new Phaser.Geom.Rectangle(-5, -5, 25, 25),
@@ -624,11 +620,7 @@ export default class PlayScene extends Phaser.Scene {
             this.activateTimeFreeze();
         });
 
-        this.timeFreezeText = this.add.text(100, 25, 'x' + (this.player.hasTimeFreezeItem || 0), {
-            fontFamily: 'visitor1',
-            fontSize: '15px',
-            fill: '#815504ff'
-        });
+        this.timeFreezeText = this.add.text(100, 23, 'x' + (this.player.hasTimeFreezeItem || 0), {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
         
         // Initialize shop status display
         this.updatePlayerStats();
@@ -639,26 +631,26 @@ export default class PlayScene extends Phaser.Scene {
 
     // Helper method to update UI when returning from shop
     // Gọi hàm này mỗi khi muốn cập nhật UI (sau shop, sau khi mua item, sau khi dùng item...)
-updatePlayerStats() {
-    // Update money and goal displays
-    this.moneyText.setText('$' + this.player.money);
-    this.goalText.setText('Goal: $' + this.player.goal);
-    this.dynamiteText.setText('x' + this.player.dynamiteCount);
+    updatePlayerStats() {
+        // Update money and goal displays
+        this.moneyText.setText('$' + this.player.money);
+        this.goalText.setText('Goal: $' + this.player.goal);
+        this.dynamiteText.setText('x' + this.player.dynamiteCount);
 
-    // ❄️ Cập nhật Time Freeze UI - giống như thuốc nổ (chỉ cập nhật text, không tạo mới)
-    if (this.timeFreezeText) {
-        this.timeFreezeText.setText('x' + (this.player.hasTimeFreezeItem || 0));
-        
-        // Thay đổi opacity dựa trên có item hay không
-        if (this.player.hasTimeFreezeItem > 0) {
-            this.timeFreezeIcon.setAlpha(1.0); // Đậm khi có item
-            this.timeFreezeText.setAlpha(1.0);
-        } else {
-            this.timeFreezeIcon.setAlpha(0.5); // Mờ khi hết item
-            this.timeFreezeText.setAlpha(0.5);
+        // ❄️ Cập nhật Time Freeze UI - giống như thuốc nổ (chỉ cập nhật text, không tạo mới)
+        if (this.timeFreezeText) {
+            this.timeFreezeText.setText('x' + (this.player.hasTimeFreezeItem || 0));
+            
+            // Thay đổi opacity dựa trên có item hay không
+            if (this.player.hasTimeFreezeItem > 0) {
+                this.timeFreezeIcon.setAlpha(1.0); // Đậm khi có item
+                this.timeFreezeText.setAlpha(1.0);
+            } else {
+                this.timeFreezeIcon.setAlpha(0.5); // Mờ khi hết item
+                this.timeFreezeText.setAlpha(0.5);
+            }
         }
     }
-}
 
     activateTimeFreeze() {
     // Kiểm tra có item không
@@ -691,231 +683,230 @@ updatePlayerStats() {
     });
 }
 
-showTimeFreezeEffect(duration) {
-    // Overlay xanh mờ phủ màn hình
-    const freezeOverlay = this.add.rectangle(
-        0, 0,
-        C.VIRTUAL_WIDTH, C.VIRTUAL_HEIGHT,
-        0x00bfff, 0.3
-    ).setOrigin(0);
+    showTimeFreezeEffect(duration) {
+        // Overlay xanh mờ phủ màn hình
+        const freezeOverlay = this.add.rectangle(
+            0, 0,
+            C.VIRTUAL_WIDTH, C.VIRTUAL_HEIGHT,
+            0x00bfff, 0.3
+        ).setOrigin(0);
 
-    // Thông báo "Time frozen"
-    const freezeMessage = this.add.text(
-        C.VIRTUAL_WIDTH / 2, 60,
-        `Ngưng Đọng Thời Gian! ${duration} giây`,
-        {
-            fontFamily: 'Kurland',
-            fontSize: '13px',
-            fill: '#00bfff',
-            stroke: '#000000',
-            strokeThickness: 3,
-            align: 'center'
-        }
-    ).setOrigin(0.5);
-
-    // Làm overlay + message mờ dần sau 3 giây
-    this.tweens.add({
-        targets: [freezeOverlay, freezeMessage],
-        alpha: 0,
-        duration: 2000,
-        onComplete: () => {
-            freezeOverlay.destroy();
-            freezeMessage.destroy();
-        }
-    });
-}
-
-deactivateTimeFreeze() {
-    this.isTimeFrozen = false;
-
-    // Cho object động hoạt động lại
-    this.mapObjects.children.entries.forEach(obj => {
-        if (obj instanceof MoveAroundMapObject || obj instanceof BossMoveAroundMapObject) {
-            console.log('Unfreezing object:', obj.constructor.name);
-            obj.unfreezeMovement();
-        }
-    });
-
-    // Hiện thông báo "Thời gian trở lại!"
-    const unfreezeMessage = this.add.text(
-        C.VIRTUAL_WIDTH / 2, 100,
-        'Thời gian trở lại!',
-        {
-            fontFamily: 'visitor1',
-            fontSize: '16px',
-            fill: '#ffff00',
-            stroke: '#000000',
-            strokeThickness: 2
-        }
-    ).setOrigin(0.5);
-
-    this.tweens.add({
-        targets: unfreezeMessage,
-        alpha: 0,
-        y: 80,
-        duration: 2000,
-        onComplete: () => unfreezeMessage.destroy()
-    });
-}
-
-createFullscreenToggleButton() {
-    // Create toggle fullscreen button (small, top-right corner)
-    const toggleButton = this.add.rectangle(this.cameras.main.width - 7, 5, 11, 9, 0x333333, 0.8)
-        .setStrokeStyle(1, 0x666666)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0) // Keep button fixed on screen
-        .setDepth(999);
-    
-    const toggleText = this.add.text(this.cameras.main.width - 7, 4, '⛶', {
-        fontFamily: 'Arial',
-        fontSize: '10px',
-        fill: '#23d650ff'
-    }).setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(1000);
-    
-    // Tooltip
-    let tooltip = null;
-    
-    // Add delay mechanism (1 second cooldown)
-    let lastClickTime = 0;
-    const clickDelay = 1000; // 1 second delay
-    
-    // Update button icon and tooltip based on fullscreen state
-    const updateToggleButton = () => {
-        const isFullscreen = !!(document.fullscreenElement || 
-                                document.webkitFullscreenElement || 
-                                document.msFullscreenElement || 
-                                document.mozFullScreenElement);
-        
-        if (isFullscreen) {
-            // In fullscreen - show exit icon and tooltip
-            toggleText.setText('✕');
-            if (tooltip) {
-                tooltip.setText('Exit Fullscreen');
+        // Thông báo "Time frozen"
+        const freezeMessage = this.add.text(
+            C.VIRTUAL_WIDTH / 2, 60,
+            `Ngưng Đọng Thời Gian! ${duration} giây`,
+            {
+                fontFamily: 'Kurland',
+                fontSize: '13px',
+                fill: '#00bfff',
+                stroke: '#000000',
+                strokeThickness: 3,
+                align: 'center'
             }
-        } else {
-            // Not in fullscreen - show fullscreen icon and tooltip
-            toggleText.setText('⛶');
-            if (tooltip) {
-                tooltip.setText('Fullscreen');
-            }
-        }
-    };
-    
-    // Initial button state
-    updateToggleButton();
-    
-    // Listen for fullscreen changes
-    const fullscreenChangeHandler = () => {
-        updateToggleButton();
-    };
-    
-    document.addEventListener('fullscreenchange', fullscreenChangeHandler);
-    document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
-    document.addEventListener('msfullscreenchange', fullscreenChangeHandler);
-    document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
-    
-    // Button hover effects
-    toggleButton.on('pointerover', () => {
-        toggleButton.setFillStyle(0x555555, 0.9);
-        this.game.canvas.style.cursor = 'pointer';
-        if (tooltip) {
-            tooltip.setVisible(true);
-        }
-    });
-    
-    toggleButton.on('pointerout', () => {
-        toggleButton.setFillStyle(0x333333, 0.8);
-        this.game.canvas.style.cursor = 'default';
-        if (tooltip) {
-            tooltip.setVisible(false);
-        }
-    });
-    
-    // Mobile touch support - show tooltip on touch start
-    toggleButton.on('pointerdown', (pointer, localX, localY, event) => {
-        // Prevent event propagation to avoid interfering with game
-        event.stopPropagation();
-        const currentTime = Date.now();
-        
-        // Check if enough time has passed since last click
-        if (currentTime - lastClickTime < clickDelay) {
-            return; // Ignore click if within delay period
-        }
-        
-        lastClickTime = currentTime;
-        toggleButton.setFillStyle(0x555555, 0.9);
-        const isFullscreen = !!(document.fullscreenElement || 
-                                document.webkitFullscreenElement || 
-                                document.msFullscreenElement || 
-                                document.mozFullScreenElement);
-        
-        if (isFullscreen) {
-            this.exitFullscreen();
-        } else {
-            this.enterFullscreen();
-        }
-        
-        if (tooltip) {
-            tooltip.setVisible(false);
-        }
-        // Reset button appearance after short delay
-        this.time.delayedCall(150, () => {
-            if (toggleButton && toggleButton.active) {
-                toggleButton.setFillStyle(0x333333, 0.8);
+        ).setOrigin(0.5);
+
+        // Làm overlay + message mờ dần sau 3 giây
+        this.tweens.add({
+            targets: [freezeOverlay, freezeMessage],
+            alpha: 0,
+            duration: 2000,
+            onComplete: () => {
+                freezeOverlay.destroy();
+                freezeMessage.destroy();
             }
         });
-    });
-    
-    // Additional mobile-specific events
-    toggleButton.on('pointerup', () => {
-        // Ensure button returns to normal state on touch end
-        toggleButton.setFillStyle(0x333333, 0.8);
-        if (tooltip) {
-            tooltip.setVisible(false);
-        }
-    });
-    
-    // Handle touch cancel (when user drags finger away)
-    toggleButton.on('pointerupoutside', () => {
-        toggleButton.setFillStyle(0x333333, 0.8);
-        if (tooltip) {
-            tooltip.setVisible(false);
-        }
-    });
-    
-    // Store references for cleanup
-    this.fullscreenToggleButton = toggleButton;
-    this.fullscreenToggleText = toggleText;
-    this.fullscreenTooltip = tooltip;
-    this.fullscreenChangeHandler = fullscreenChangeHandler;
-}
-
-enterFullscreen() {
-    const element = document.documentElement;
-    
-    if (element.requestFullscreen) {
-        element.requestFullscreen();
-    } else if (element.webkitRequestFullscreen) { /* Safari */
-        element.webkitRequestFullscreen();
-    } else if (element.msRequestFullscreen) { /* IE11 */
-        element.msRequestFullscreen();
-    } else if (element.mozRequestFullScreen) { /* Firefox */
-        element.mozRequestFullScreen();
     }
-}
 
-exitFullscreen() {
-    if (document.exitFullscreen) {
-        document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) { /* Safari */
-        document.webkitExitFullscreen();
-    } else if (document.msExitFullscreen) { /* IE11 */
-        document.msExitFullscreen();
-    } else if (document.mozCancelFullScreen) { /* Firefox */
-        document.mozCancelFullScreen();
+    deactivateTimeFreeze() {
+        this.isTimeFrozen = false;
+
+        // Cho object động hoạt động lại
+        this.mapObjects.children.entries.forEach(obj => {
+            if (obj instanceof MoveAroundMapObject || obj instanceof BossMoveAroundMapObject) {
+                console.log('Unfreezing object:', obj.constructor.name);
+                obj.unfreezeMovement();
+            }
+        });
+
+        // Hiện thông báo "Thời gian trở lại!"
+        const unfreezeMessage = this.add.text(
+            C.VIRTUAL_WIDTH / 2, 100,
+            'Thời gian trở lại!',
+            {
+                fontFamily: 'visitor1',
+                fontSize: '16px',
+                fill: '#ffff00',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        ).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: unfreezeMessage,
+            alpha: 0,
+            y: 80,
+            duration: 2000,
+            onComplete: () => unfreezeMessage.destroy()
+        });
     }
-}
 
+    createFullscreenToggleButton() {
+        // Create toggle fullscreen button (small, top-right corner)
+        const toggleButton = this.add.rectangle(this.cameras.main.width - 7, 5, 11, 9, 0x333333, 0.8)
+            .setStrokeStyle(1, 0x666666)
+            .setInteractive({ useHandCursor: true })
+            .setScrollFactor(0) // Keep button fixed on screen
+            .setDepth(999);
+        
+        const toggleText = this.add.text(this.cameras.main.width - 7, 4, '⛶', {
+            fontFamily: 'Arial',
+            fontSize: '10px',
+            fill: '#23d650ff'
+        }).setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(1000);
+        
+        // Tooltip
+        let tooltip = null;
+        
+        // Add delay mechanism (1 second cooldown)
+        let lastClickTime = 0;
+        const clickDelay = 1000; // 1 second delay
+        
+        // Update button icon and tooltip based on fullscreen state
+        const updateToggleButton = () => {
+            const isFullscreen = !!(document.fullscreenElement || 
+                                    document.webkitFullscreenElement || 
+                                    document.msFullscreenElement || 
+                                    document.mozFullScreenElement);
+            
+            if (isFullscreen) {
+                // In fullscreen - show exit icon and tooltip
+                toggleText.setText('✕');
+                if (tooltip) {
+                    tooltip.setText('Exit Fullscreen');
+                }
+            } else {
+                // Not in fullscreen - show fullscreen icon and tooltip
+                toggleText.setText('⛶');
+                if (tooltip) {
+                    tooltip.setText('Fullscreen');
+                }
+            }
+        };
+        
+        // Initial button state
+        updateToggleButton();
+        
+        // Listen for fullscreen changes
+        const fullscreenChangeHandler = () => {
+            updateToggleButton();
+        };
+        
+        document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+        document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+        document.addEventListener('msfullscreenchange', fullscreenChangeHandler);
+        document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
+        
+        // Button hover effects
+        toggleButton.on('pointerover', () => {
+            toggleButton.setFillStyle(0x555555, 0.9);
+            this.game.canvas.style.cursor = 'pointer';
+            if (tooltip) {
+                tooltip.setVisible(true);
+            }
+        });
+        
+        toggleButton.on('pointerout', () => {
+            toggleButton.setFillStyle(0x333333, 0.8);
+            this.game.canvas.style.cursor = 'default';
+            if (tooltip) {
+                tooltip.setVisible(false);
+            }
+        });
+        
+        // Mobile touch support - show tooltip on touch start
+        toggleButton.on('pointerdown', (pointer, localX, localY, event) => {
+            // Prevent event propagation to avoid interfering with game
+            event.stopPropagation();
+            const currentTime = Date.now();
+            
+            // Check if enough time has passed since last click
+            if (currentTime - lastClickTime < clickDelay) {
+                return; // Ignore click if within delay period
+            }
+            
+            lastClickTime = currentTime;
+            toggleButton.setFillStyle(0x555555, 0.9);
+            const isFullscreen = !!(document.fullscreenElement || 
+                                    document.webkitFullscreenElement || 
+                                    document.msFullscreenElement || 
+                                    document.mozFullScreenElement);
+            
+            if (isFullscreen) {
+                this.exitFullscreen();
+            } else {
+                this.enterFullscreen();
+            }
+            
+            if (tooltip) {
+                tooltip.setVisible(false);
+            }
+            // Reset button appearance after short delay
+            this.time.delayedCall(150, () => {
+                if (toggleButton && toggleButton.active) {
+                    toggleButton.setFillStyle(0x333333, 0.8);
+                }
+            });
+        });
+        
+        // Additional mobile-specific events
+        toggleButton.on('pointerup', () => {
+            // Ensure button returns to normal state on touch end
+            toggleButton.setFillStyle(0x333333, 0.8);
+            if (tooltip) {
+                tooltip.setVisible(false);
+            }
+        });
+        
+        // Handle touch cancel (when user drags finger away)
+        toggleButton.on('pointerupoutside', () => {
+            toggleButton.setFillStyle(0x333333, 0.8);
+            if (tooltip) {
+                tooltip.setVisible(false);
+            }
+        });
+        
+        // Store references for cleanup
+        this.fullscreenToggleButton = toggleButton;
+        this.fullscreenToggleText = toggleText;
+        this.fullscreenTooltip = tooltip;
+        this.fullscreenChangeHandler = fullscreenChangeHandler;
+    }
+
+    enterFullscreen() {
+        const element = document.documentElement;
+        
+        if (element.requestFullscreen) {
+            element.requestFullscreen();
+        } else if (element.webkitRequestFullscreen) { /* Safari */
+            element.webkitRequestFullscreen();
+        } else if (element.msRequestFullscreen) { /* IE11 */
+            element.msRequestFullscreen();
+        } else if (element.mozRequestFullScreen) { /* Firefox */
+            element.mozRequestFullScreen();
+        }
+    }
+
+    exitFullscreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) { /* IE11 */
+            document.msExitFullscreen();
+        } else if (document.mozCancelFullScreen) { /* Firefox */
+            document.mozCancelFullScreen();
+        }
+    }
 }
