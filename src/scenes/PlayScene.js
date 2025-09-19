@@ -756,14 +756,22 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     createFullscreenToggleButton() {
-        // Create toggle fullscreen button (small, top-right corner)
-        const toggleButton = this.add.rectangle(this.cameras.main.width - 7, 5, 11, 9, 0x333333, 0.8)
+        // 📱 Check if iPhone for positioning
+        const isIPhone = /iPhone/i.test(navigator.userAgent) || 
+                         (/iPad|iPod/i.test(navigator.userAgent) && !window.MSStream);
+        
+        // Adjust position for iPhone notch
+        const buttonX = isIPhone ? this.cameras.main.width - 15 : this.cameras.main.width - 7;
+        const buttonY = isIPhone ? 15 : 5;
+        
+        // Create toggle fullscreen button (small, top-right corner, notch-safe)
+        const toggleButton = this.add.rectangle(buttonX, buttonY, 11, 9, 0x333333, 0.8)
             .setStrokeStyle(1, 0x666666)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0) // Keep button fixed on screen
             .setDepth(999);
         
-        const toggleText = this.add.text(this.cameras.main.width - 7, 4, '⛶', {
+        const toggleText = this.add.text(buttonX, buttonY - 1, '⛶', {
             fontFamily: 'Arial',
             fontSize: '10px',
             fill: '#23d650ff'
