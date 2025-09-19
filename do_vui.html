@@ -215,23 +215,19 @@
         // ✨ [BẮT ĐẦU SỬA LỖI] Cải thiện hàm phát âm thanh
         async function playSound(soundElement) {
             try {
-                // Dừng hẳn âm thanh đang phát (nếu có)
-                soundElement.pause();
-                // Tua về đầu để sẵn sàng phát lại ngay lập tức
                 soundElement.currentTime = 0;
-                // Lệnh play() trả về một Promise, chúng ta cần đợi nó hoàn thành
                 await soundElement.play();
             } catch (error) {
-                // Ghi lại lỗi nếu trình duyệt chặn phát âm thanh
                 console.error("Lỗi khi phát âm thanh:", error);
             }
         }
         // Hàm này chỉ chạy MỘT LẦN DUY NHẤT sau lần tương tác đầu tiên
-        function unlockAndLoopSilentAudio() {
-            if (isAudioUnlocked) return;
-            // Chạy âm thanh im lặng và lặp lại
-            silentAudio.play().catch(e => console.error("Không thể phát âm thanh im lặng:", e));
-            isAudioUnlocked = true;
+        function ensureSilentAudioLoop() {
+            if (!isAudioUnlocked) {
+                isAudioUnlocked = true;
+            }
+            // Lệnh play() sẽ tự bỏ qua nếu âm thanh đã đang chạy rồi
+            silentAudio.play().catch(e => {}); 
         }
         function playCorrectSound() {
             playSound(correctSound);
@@ -332,7 +328,7 @@
             clearInterval(timer);
             const selectedButton = e.target;
             const correct = selectedButton.dataset.correct === 'true';
-            unlockAndLoopSilentAudio();
+            ensureSilentAudioLoop();
             if (correct) {
                 selectedButton.classList.add('correct');
                 resultElement.textContent = 'Chính xác! 🎉';
