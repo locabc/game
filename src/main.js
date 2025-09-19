@@ -7,43 +7,6 @@ import ShopScene from './scenes/ShopScene.js';
 import SlotMachineScene from './scenes/SlotMachineScene.js';
 import * as C from './utils/Constants.js';
 
-// 📱 iPhone detection and notch handling
-const isIPhone = () => {
-    return /iPhone/i.test(navigator.userAgent) || 
-           (/iPad|iPod/i.test(navigator.userAgent) && !window.MSStream);
-};
-
-// 🎨 Apply iPhone-specific styles
-if (isIPhone()) {
-    console.log('📱 iPhone detected - Applying notch-safe styles and 180px height');
-    
-    // Add iPhone-specific CSS
-    const iPhoneStyle = document.createElement('style');
-    iPhoneStyle.textContent = `
-        body {
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-            background: #000;
-        }
-        #phaser-game {
-            margin-top: max(env(safe-area-inset-top), 20px);
-            margin-bottom: max(env(safe-area-inset-bottom), 20px);
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-        }
-        canvas {
-            border-radius: 10px;
-            max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 40px);
-        }
-        
-        /* Ensure fullscreen button doesn't interfere with notch */
-        .fullscreen-btn {
-            bottom: max(env(safe-area-inset-bottom), 20px) !important;
-        }
-    `;
-    document.head.appendChild(iPhoneStyle);
-}
-
 const config = {
     type: Phaser.AUTO,
     scale: {

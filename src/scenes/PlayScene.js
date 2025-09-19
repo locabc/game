@@ -608,27 +608,12 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     createUI() {
-        // 📱 Tính toán vị trí UI an toàn cho iPhone
-        const safeMargins = C.DEVICE_UTILS.getFullscreenSafeMargins();
-        
-        // UI coordinates với safe area offset
-        const leftUIX = 10 + safeMargins.left;
-        const rightUIX = 250 - safeMargins.right;
-        const topUIY = 10 + safeMargins.top;
-        const secondRowY = 23 + safeMargins.top;
-        
-        // Debug log cho iPhone detection
-        if (C.DEVICE_UTILS.isIPhone()) {
-            console.log('📱 iPhone detected - Safe margins:', safeMargins);
-            console.log('📱 Has notch:', C.DEVICE_UTILS.hasNotch());
-        }
-        
-        this.moneyText = this.add.text(leftUIX, topUIY, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
-        this.goalText = this.add.text(leftUIX, secondRowY, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '15', fill: '#815504ff' });
-        this.timeText = this.add.text(rightUIX, topUIY, 'Time:60', { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
-        this.levelText = this.add.text(rightUIX, secondRowY, 'Level:' + this.player.level, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
-        this.dynamiteText = this.add.text(210 - safeMargins.right, secondRowY, 'x' + this.player.dynamiteCount, {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
-        this.timeFreezeIcon = this.add.text(80 + safeMargins.left, 20 + safeMargins.top, '❄️', {fontFamily: 'Arial',fontSize: '13px'
+        this.moneyText = this.add.text(10, 10, '$' + this.player.money, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.goalText = this.add.text(10, 23, 'Goal: $' + this.player.goal, { fontFamily: 'visitor1', fontSize: '15', fill: '#815504ff' });
+        this.timeText = this.add.text(250, 10, 'Time:60', { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.levelText = this.add.text(250, 23, 'Level:' + this.player.level, { fontFamily: 'visitor1', fontSize: '15px', fill: '#815504ff' });
+        this.dynamiteText = this.add.text(210, 23, 'x' + this.player.dynamiteCount, {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
+        this.timeFreezeIcon = this.add.text(80, 20, '❄️', {fontFamily: 'Arial',fontSize: '13px'
         }).setInteractive({ 
             useHandCursor: true,
             hitArea: new Phaser.Geom.Rectangle(-5, -5, 25, 25),
@@ -640,7 +625,7 @@ export default class PlayScene extends Phaser.Scene {
             this.activateTimeFreeze();
         });
 
-        this.timeFreezeText = this.add.text(100 + safeMargins.left, secondRowY, 'x' + (this.player.hasTimeFreezeItem || 0), {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
+        this.timeFreezeText = this.add.text(100, 23, 'x' + (this.player.hasTimeFreezeItem || 0), {fontFamily: 'visitor1',fontSize: '15px',fill: '#815504ff'});
         
         // Initialize shop status display
         this.updatePlayerStats();
@@ -771,21 +756,14 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     createFullscreenToggleButton() {
-        // 📱 Tính toán vị trí an toàn cho fullscreen button
-        const safeMargins = C.DEVICE_UTILS.getFullscreenSafeMargins();
-        
-        // Đặt button ở góc phải trên với safe area
-        const buttonX = this.cameras.main.width - 15 - safeMargins.right;
-        const buttonY = 10 + safeMargins.top;
-        
-        // Create toggle fullscreen button (small, top-right corner with safe area)
-        const toggleButton = this.add.rectangle(buttonX, buttonY, 11, 9, 0x333333, 0.8)
+        // Create toggle fullscreen button (small, top-right corner)
+        const toggleButton = this.add.rectangle(this.cameras.main.width - 7, 5, 11, 9, 0x333333, 0.8)
             .setStrokeStyle(1, 0x666666)
             .setInteractive({ useHandCursor: true })
             .setScrollFactor(0) // Keep button fixed on screen
             .setDepth(999);
         
-        const toggleText = this.add.text(buttonX, buttonY - 1, '⛶', {
+        const toggleText = this.add.text(this.cameras.main.width - 7, 4, '⛶', {
             fontFamily: 'Arial',
             fontSize: '10px',
             fill: '#23d650ff'

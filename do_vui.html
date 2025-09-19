@@ -2,10 +2,9 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Đố Vui</title>
     <style>
-        /* 📱 iPhone Safe Area Support */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -16,12 +15,6 @@
             background: linear-gradient(135deg, #1a237e, #0d1a2d);
             color: #f0f4f8;
             transition: background 0.5s ease-in-out;
-            
-            /* Safe area padding cho iPhone */
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
         }
 
         .container {
@@ -35,10 +28,6 @@
             border: 2px solid #34495e;
             animation: fadeIn 1s ease-in-out;
             position: relative;
-            
-            /* Đảm bảo container không bị che bởi notch */
-            margin-top: max(20px, env(safe-area-inset-top));
-            margin-bottom: max(20px, env(safe-area-inset-bottom));
         }
 
         @keyframes fadeIn {
