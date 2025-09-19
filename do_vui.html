@@ -121,6 +121,12 @@
             40%, 80% { transform: translateX(10px); }
         }
 
+        @keyframes bounceIn {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+            50% { transform: scale(1.1) rotate(5deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
         /* Tối ưu cho giao diện landscape trên mobile */
         @media (orientation: landscape) and (max-height: 500px) {
             body {
@@ -212,22 +218,41 @@
             }
         }
         
-        // ✨ [BẮT ĐẦU SỬA LỖI] Cải thiện hàm phát âm thanh
+        
+        // THAY THẾ TOÀN BỘ HÀM playSound CŨ BẰNG HÀM MỚI NÀY
         async function playSound(soundElement) {
+            // 1. Tạm dừng âm thanh nền để tránh xung đột
+            silentAudio.pause();
+
             try {
+                // 2. Lắng nghe sự kiện 'ended' - chỉ chạy khi âm thanh hiệu ứng đã phát xong
+                soundElement.onended = function() {
+                    // 4. Khi đã phát xong, bật lại âm thanh nền
+                    if (isAudioUnlocked) {
+                        silentAudio.play().catch(e => {});
+                    }
+                    // Hủy lắng nghe sự kiện để tránh lỗi lặp lại
+                    soundElement.onended = null;
+                };
+
+                // 3. Phát âm thanh hiệu ứng (đúng/sai)
                 soundElement.currentTime = 0;
                 await soundElement.play();
+
             } catch (error) {
                 console.error("Lỗi khi phát âm thanh:", error);
+                // Fallback: Nếu không thể phát hiệu ứng, vẫn phải đảm bảo âm thanh nền chạy lại
+                if (isAudioUnlocked) {
+                    silentAudio.play().catch(e => {});
+                }
             }
         }
         // Hàm này chỉ chạy MỘT LẦN DUY NHẤT sau lần tương tác đầu tiên
-        function ensureSilentAudioLoop() {
-            if (!isAudioUnlocked) {
-                isAudioUnlocked = true;
-            }
-            // Lệnh play() sẽ tự bỏ qua nếu âm thanh đã đang chạy rồi
-            silentAudio.play().catch(e => {}); 
+        function unlockAndLoopSilentAudio() {
+            if (isAudioUnlocked) return;
+            // Chạy âm thanh im lặng và lặp lại
+            silentAudio.play().catch(e => console.error("Không thể phát âm thanh im lặng:", e));
+            isAudioUnlocked = true;
         }
         function playCorrectSound() {
             playSound(correctSound);
@@ -328,7 +353,7 @@
             clearInterval(timer);
             const selectedButton = e.target;
             const correct = selectedButton.dataset.correct === 'true';
-            ensureSilentAudioLoop();
+            unlockAndLoopSilentAudio();
             if (correct) {
                 selectedButton.classList.add('correct');
                 resultElement.textContent = 'Chính xác! 🎉';
@@ -410,6 +435,62 @@
                 }
             };
             answerButtonsElement.appendChild(backButton);
+        }
+        
+        // 🎁 Listener để nhận và hiển thị thông báo phần thưởng từ GiftGame
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'showReward') {
+                showRewardNotification(event.data.reward);
+            }
+        });
+        
+        // 🎉 Hàm hiển thị thông báo phần thưởng
+        function showRewardNotification(reward) {
+            // Tạo overlay cho thông báo
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+                animation: fadeIn 0.3s ease-in-out;
+            `;
+            
+            // Tạo thông báo phần thưởng
+            const rewardBox = document.createElement('div');
+            rewardBox.style.cssText = `
+                background: linear-gradient(135deg, #2c3e50, #3498db);
+                padding: 30px;
+                border-radius: 20px;
+                text-align: center;
+                color: white;
+                max-width: 400px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                border: 2px solid #f39c12;
+                animation: bounceIn 0.5s ease-in-out;
+            `;
+            
+            rewardBox.innerHTML = `
+                <h2 style="color: #f39c12; margin-bottom: 20px; font-size: 1.5em;">🎁 PHẦN THƯỞNG</h2>
+                <div style="font-size: 1.2em; line-height: 1.5; white-space: pre-line;">${reward.text}</div>
+                
+            `;
+            
+            overlay.appendChild(rewardBox);
+            document.body.appendChild(overlay);
+            
+            // Tự động đóng sau 5 giây
+            setTimeout(() => {
+                if (overlay.parentElement) {
+                    overlay.remove();
+                }
+            }, 5000);
         }
         
         window.onload = loadRiddlesGame;

@@ -423,10 +423,15 @@ export default class PlayScene extends Phaser.Scene {
             // ✅ Apply shop item effects
             const entityName = entity.texture.key;
             
-            if (this.player.hasRockCollectorsBook && entityName.includes('Rock')) {
-                finalBonus *= 4; // 4x rock value
+            if (this.player.hasRockCollectorsBook) {
+                if (entityName === 'BigRock') {
+                    finalBonus *= 3; // 3x rock value
+                }
+                else {
+                    (entityName === 'NormalRock' || entityName === 'MiniRock')
+                     finalBonus *= 10; // 10x rock value
+                }
             }
-            
             if (this.player.hasGemPolish && (entityName === 'Diamond' || entityName.includes('Gold'))) {
                 finalBonus *= 1.5; // 50% more for gems/gold
             }
@@ -885,24 +890,10 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     enterFullscreen() {
-        // Detect iOS devices
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        
-        if (isIOS) {
-            // iOS doesn't support fullscreen API properly
-            // Show instruction to user instead
-            this.showIOSFullscreenInstructions();
-            return;
-        }
-        
         const element = document.documentElement;
         
         if (element.requestFullscreen) {
-            element.requestFullscreen().catch(err => {
-                console.warn('Fullscreen failed:', err);
-                this.showIOSFullscreenInstructions();
-            });
+            element.requestFullscreen();
         } else if (element.webkitRequestFullscreen) { /* Safari */
             element.webkitRequestFullscreen();
         } else if (element.msRequestFullscreen) { /* IE11 */
@@ -922,107 +913,5 @@ export default class PlayScene extends Phaser.Scene {
         } else if (document.mozCancelFullScreen) { /* Firefox */
             document.mozCancelFullScreen();
         }
-    }
-
-    showIOSFullscreenInstructions() {
-        // Create overlay background
-        const overlay = this.add.rectangle(
-            this.cameras.main.centerX, 
-            this.cameras.main.centerY, 
-            this.cameras.main.width, 
-            this.cameras.main.height, 
-            0x000000, 
-            0.8
-        ).setScrollFactor(0).setDepth(10000);
-
-        // Create instruction panel
-        const panel = this.add.rectangle(
-            this.cameras.main.centerX, 
-            this.cameras.main.centerY, 
-            300, 
-            200, 
-            0x1a1a1a, 
-            0.95
-        ).setScrollFactor(0).setDepth(10001).setStrokeStyle(2, 0x4a9eff);
-
-        // Title
-        const title = this.add.text(
-            this.cameras.main.centerX, 
-            this.cameras.main.centerY - 60, 
-            '📱 Fullscreen trên iOS', 
-            {
-                fontFamily: 'Arial',
-                fontSize: '18px',
-                fill: '#4a9eff',
-                fontStyle: 'bold'
-            }
-        ).setOrigin(0.5).setScrollFactor(0).setDepth(10002);
-
-        // Instructions
-        const instructions = this.add.text(
-            this.cameras.main.centerX, 
-            this.cameras.main.centerY - 20, 
-            'iOS không hỗ trợ fullscreen web.\n\nĐể có trải nghiệm tốt nhất:\n• Xoay ngang điện thoại\n• Ẩn thanh địa chỉ bằng cách\n  cuộn xuống một chút\n• Hoặc thêm vào Home Screen', 
-            {
-                fontFamily: 'Arial',
-                fontSize: '14px',
-                fill: '#ffffff',
-                align: 'center',
-                lineSpacing: 4
-            }
-        ).setOrigin(0.5).setScrollFactor(0).setDepth(10002);
-
-        // Close button
-        const closeButton = this.add.rectangle(
-            this.cameras.main.centerX, 
-            this.cameras.main.centerY + 70, 
-            100, 
-            30, 
-            0x4a9eff, 
-            0.8
-        ).setScrollFactor(0).setDepth(10002).setInteractive({ useHandCursor: true });
-
-        const closeText = this.add.text(
-            this.cameras.main.centerX, 
-            this.cameras.main.centerY + 70, 
-            'Đóng', 
-            {
-                fontFamily: 'Arial',
-                fontSize: '14px',
-                fill: '#ffffff',
-                fontStyle: 'bold'
-            }
-        ).setOrigin(0.5).setScrollFactor(0).setDepth(10003);
-
-        // Close button interactions
-        closeButton.on('pointerover', () => {
-            closeButton.setFillStyle(0x6bb6ff, 0.9);
-        });
-
-        closeButton.on('pointerout', () => {
-            closeButton.setFillStyle(0x4a9eff, 0.8);
-        });
-
-        closeButton.on('pointerdown', () => {
-            // Remove all instruction elements
-            overlay.destroy();
-            panel.destroy();
-            title.destroy();
-            instructions.destroy();
-            closeButton.destroy();
-            closeText.destroy();
-        });
-
-        // Auto-close after 8 seconds
-        this.time.delayedCall(8000, () => {
-            if (overlay && overlay.active) {
-                overlay.destroy();
-                panel.destroy();
-                title.destroy();
-                instructions.destroy();
-                closeButton.destroy();
-                closeText.destroy();
-            }
-        });
     }
 }

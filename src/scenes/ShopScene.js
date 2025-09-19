@@ -123,8 +123,8 @@ export default class ShopScene extends Phaser.Scene {
                 }
             },
             {
-                name: 'Nhân Đôi Giá Trị Của Đá',
-                description: 'Đá cho nhiều tiền hơn (x4)',
+                name: 'Tăng Giá Trị Của Đá ',
+                description: 'Đá cho nhiều tiền hơn MiniRock, NormalRock x10, BigRock x3',
                 price: this.calculateItemPrice(120, 60, levelPriceMultiplier, 'premium'), // Base 120, variation 60
                 image: 'RockCollectorsBook',
                 effect: () => {

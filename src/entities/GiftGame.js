@@ -8,7 +8,7 @@ export function createGiftBoxMiniGame(scene) {
     const games = ['lat_the.html', 'do_vui.html', 'tinh_toan.html'];
     const randomGame = games[Math.floor(Math.random() * games.length)];
     
-    console.log('🎮 Random game selected:', randomGame);
+    //console.log('🎮 Random game selected:', randomGame);
     
     // Tạo hiệu ứng tối nền để hiển thị trò chơi
     const width = scene.cameras.main.width;
@@ -69,7 +69,7 @@ export function createGiftBoxMiniGame(scene) {
             const result = event.data.result;
             const correctAnswers = result.correctAnswers;
             
-            console.log('🧠 Quiz game completed with', correctAnswers, 'correct answers');
+            //console.log('🧠 Quiz game completed with', correctAnswers, 'correct answers');
             
             // Xử lý phần thưởng dựa trên số câu trả lời đúng
             let rewardText = '';
@@ -124,25 +124,28 @@ export function createGiftBoxMiniGame(scene) {
             // Cập nhật UI
             if (scene.updatePlayerStats) scene.updatePlayerStats();
             
-            // Gửi thông báo phần thưởng về game quiz để hiển thị
-            if (window.frames.length > 0) {
-                try {
-                    const iframe = document.querySelector('iframe');
-                    if (iframe && iframe.contentWindow) {
-                        iframe.contentWindow.postMessage({
-                            type: 'showReward',
-                            reward: {
-                                text: rewardText,
-                                money: rewardMoney,
-                                dynamite: rewardDynamite,
-                                freeze: rewardFreeze
-                            }
-                        }, '*');
+            // Gửi thông báo phần thưởng về game quiz để hiển thị (với delay để đảm bảo UI sẵn sàng)
+            setTimeout(() => {
+                if (window.frames.length > 0) {
+                    try {
+                        const iframe = document.querySelector('iframe');
+                        if (iframe && iframe.contentWindow) {
+                            //console.log('🎁 Sending reward message to iframe:', rewardText);
+                            iframe.contentWindow.postMessage({
+                                type: 'showReward',
+                                reward: {
+                                    text: rewardText,
+                                    money: rewardMoney,
+                                    dynamite: rewardDynamite,
+                                    freeze: rewardFreeze
+                                }
+                            }, '*');
+                        }
+                    } catch (error) {
+                        console.warn('Could not send reward message to iframe:', error);
                     }
-                } catch (error) {
-                    console.warn('Could not send reward message to iframe:', error);
                 }
-            }
+            }, 500); // Delay 500ms để UI quiz sẵn sàng
             
             // Đóng iframe sau khi hiển thị thông báo
             setTimeout(() => {

@@ -66,15 +66,22 @@ export default class Player {
 
             this.goal += increment;
             // Kiểm tra chênh lệch giữa goal và tiền người chơi
-            let diff = this.goal - this.money;  
+            let diff = this.goal - this.money;
             if (diff > 6000) {
                 if (this.level % 5 === 0) {
                     // Nếu level chia hết cho 5 → giảm 25%
                     this.goal = this.money + Math.round(diff * 0.75);
+                    //console.log(`Level ${this.level}: Goal adjusted by 25% reduction. New goal: ${this.goal}`);
                 } else {
                     // Các level khác → giảm 45%
                     this.goal = this.money + Math.round(diff * 0.55);
+                    //console.log(`Level ${this.level}: Goal adjusted by 45% reduction. New goal: ${this.goal}`);
                 }
+            } else if (this.money > this.goal + 8000) {
+                // Nếu gold của người chơi lớn hơn goal của màn tiếp theo 8000 → lấy 25% phần chênh lệch cộng vào goal
+                let excess = this.money - this.goal;
+                this.goal = this.goal + Math.round(excess * 0.25);
+                //console.log(`Level ${this.level}: Goal increased by 25% of excess money. New goal: ${this.goal}`);
             }
         }
     }
@@ -229,7 +236,7 @@ export default class Player {
         this.realLevelStr = this.levelsList[mapIndex];
         console.log(`Hiện đang ở level: ${this.level}, map: ${this.realLevelStr}, Index: ${mapIndex}`);
         
-       /*
+        /*
         goToNextLevel() {
     this.level++;
     
